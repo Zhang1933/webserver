@@ -9,20 +9,24 @@
 
 #include "muduo/base/CurrentThread.h"
 #include "muduo/base/Logging.h"
+#include "muduo/net/Channel.h"
+#include "muduo/net/Poller.h"
 
 #include <assert.h>
 #include <cstddef>
 #include <poll.h>
-#include <sys/poll.h>
 
 using namespace muduo;
-using namespace muduo::net;
 
-namespace {
-  __thread EventLoop* t_loopInThisThread=0;
-}
 
-EventLoop::EventLoop():looping_(false),threadId_(CurrentThread::tid()){
+__thread EventLoop* t_loopInThisThread=0;
+const int kPollTimesMs=10000;
+
+EventLoop::EventLoop()
+  :looping_(false),
+  threadId_(CurrentThread::tid()),
+  poller_(new Poller(this))
+{
   LOG_TRACE << "EventLoop created " << this << " in thread " << threadId_;
   if (t_loopInThisThread)
   {
@@ -46,9 +50,17 @@ void EventLoop::loop()
   assert(!looping_);
   assertInLoopThread();
   looping_=true;
-  ::poll(NULL, 0, 5*100000);
+  quit_=false;
+  while(!quit_)
+  {
+    activeChannels_.clear();
+    poller_->poll(kPollTimesMs,&activeChannels_);
+    for(ChannelList::iterator it=activeChannels_.begin();it!=activeChannels_.end();++it){
+      (*it)->handleEvent();
+    }
+  }
   LOG_TRACE << "EventLoop " << this << " stop looping";
-  looping_=false;
+  looping_ = false;
 }
 
 void EventLoop::abortNotInloopThread()
@@ -56,4 +68,17 @@ void EventLoop::abortNotInloopThread()
     LOG_FATAL << "EventLoop::abortNotInLoopThread - EventLoop " << this
             << " was created in threadId_ = " << threadId_
             << ", current thread id = " <<  CurrentThread::tid();
+}
+
+void EventLoop::updateChannel(Channel *channel)
+{
+  assert(channel->ownerLoop()==this);
+  assertInLoopThread();// 确保调用的和创建的线程相同
+  poller_->updateChannel(channel);
+}
+
+void EventLoop::quit()
+{
+  quit_=true;
+  //wakeup()
 }

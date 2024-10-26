@@ -2,7 +2,7 @@
 #include "muduo/net/EventLoop.h"
 #include "muduo/base/Thread.h"
 
-muduo::net::EventLoop* g_loop;
+muduo::EventLoop* g_loop;
 
 void threadFunc()
 {
@@ -12,7 +12,7 @@ void threadFunc()
 int main()
 {
   muduo::Logger::setLogLevel(muduo::Logger::TRACE);
-  muduo::net::EventLoop loop;
+  muduo::EventLoop loop;
   g_loop = &loop;
   muduo::Thread t(threadFunc);
   t.start();

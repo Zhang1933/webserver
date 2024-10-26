@@ -9,15 +9,19 @@
 #define MUDUO_NET_EVENTLOOP_H
 
 #include <boost/any.hpp>
+#include <memory>
 #include <sched.h>
+#include <vector>
 
 #include "muduo/base/Mutex.h"
 #include "muduo/base/CurrentThread.h"
-
 namespace muduo
 {
-namespace  net
-{
+
+class Channel;
+class Poller;
+
+typedef std::vector<Channel*>ChannelList;
 
 class EventLoop : noncopyable
 {
@@ -26,6 +30,7 @@ public:
   ~EventLoop();
 
   void loop();
+  void quit();
 
   void assertInLoopThread(){
     if(!isInLoopThread())
@@ -34,17 +39,21 @@ public:
     }
   }
 
+  // internal use only
+  void updateChannel(Channel* channel);
   bool isInLoopThread()const{return threadId_==CurrentThread::tid();};
 
 private:
   void abortNotInloopThread();
 
+  
   bool looping_; /*atomic*/
+  bool quit_;
   const pid_t threadId_;
 
+  ChannelList activeChannels_;
+  std::unique_ptr<Poller> poller_;
 };
-
-}  // namespace net
 } // namespace muduo
 
 #endif  // MUDUO_NET_EVENTLOOP_H
