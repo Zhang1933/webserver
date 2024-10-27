@@ -153,24 +153,6 @@ std::vector<TimerQueue::Entry>TimerQueue::getExpired(Timestamp now)
     return expired;
 }
 
-
-
-TimerId TimerQueue::addTimer(const TimerCallback&cb,
-                            Timestamp when,
-                            double interval)
-{
-    Timer* timer = new Timer(cb, when, interval);
-    loop_->assertInLoopThread();
-     bool earliestChanged = insert(timer);
-
-    if(earliestChanged)
-    {
-        resetTimerfd(timerfd_,timer->expireation());
-    }
-    //FIXME:返回原始指针，可能有bug
-    return TimerId(timer);
-}
-
 bool TimerQueue::insert(Timer* timer)
 {
     bool earliestChanged=false;
@@ -183,4 +165,24 @@ bool TimerQueue::insert(Timer* timer)
     auto result=timers_.insert(std::make_pair(when, timer));
     assert(result.second);
     return earliestChanged;
+}
+
+TimerId TimerQueue::addTimer(const TimerCallback&cb,
+                            Timestamp when,
+                            double interval)
+{
+    Timer* timer = new Timer(cb, when, interval);
+    loop_->runInLoop(
+        std::bind(&TimerQueue::addTimerInLoop,this,timer));
+    return TimerId(timer);
+}
+
+void TimerQueue::addTimerInLoop(Timer* timer)
+{
+    loop_->assertInLoopThread();
+     bool earliestChanged = insert(timer);
+    if(earliestChanged)
+    {
+        resetTimerfd(timerfd_,timer->expireation());
+    }
 }

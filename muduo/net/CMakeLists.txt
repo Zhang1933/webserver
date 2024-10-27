@@ -5,6 +5,7 @@ Poller.cc
 Timer.cc
 TimerId.cc
 TimerQueue.cc
+EventLoopThread.cc
 )
 
 add_library(muduo_net ${net_SRCS})
@@ -20,6 +21,7 @@ Timer.h
 TimerId.h
 TimerQueue.h
 Callback.h
+EventLoopThread.h
 )
 
 install(FILES ${HEADERS} DESTINATION include/muduo/net)

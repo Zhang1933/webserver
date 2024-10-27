@@ -45,6 +45,8 @@ private:
     typedef std::set<Entry> TimerList;
 
     bool insert(Timer* timer);
+    
+    void addTimerInLoop(Timer* timer);
     // called when timerfd alarms
     void handleRead();
     void reset(std::vector<Entry>& expired, Timestamp now);

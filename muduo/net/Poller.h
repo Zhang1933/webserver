@@ -7,11 +7,10 @@
 #include <map>
 #include <poll.h>
 #include <vector>
-
 namespace muduo
 {
 class Channel;
-class EventLoop;
+
 
 class Poller:noncopyable{
 public:
