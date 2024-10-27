@@ -1,4 +1,3 @@
-// reactor s03 5
 #include "muduo/net/EventLoop.h"
 #include <stdio.h>
 

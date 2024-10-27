@@ -1,4 +1,3 @@
-#include "muduo/base/Logging.h"
 #include "muduo/net/EventLoop.h"
 #include "muduo/net/EventLoopThread.h"
 #include <stdio.h>
@@ -11,7 +10,6 @@ void runInThread()
 
 int main()
 {
-  //muduo::Logger::setLogLevel(muduo::Logger::TRACE);
   printf("main(): pid = %d, tid = %d\n",
          getpid(), muduo::CurrentThread::tid());
 
