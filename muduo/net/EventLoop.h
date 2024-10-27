@@ -13,13 +13,20 @@
 #include <sched.h>
 #include <vector>
 
+#include "muduo/base/Timestamp.h"
 #include "muduo/base/Mutex.h"
 #include "muduo/base/CurrentThread.h"
+
+#include "muduo/net/Timer.h"
+#include "muduo/net/TimerId.h"
+#include "muduo/net/Callback.h"
+
 namespace muduo
 {
 
 class Channel;
 class Poller;
+class TimerQueue;
 
 typedef std::vector<Channel*>ChannelList;
 
@@ -27,10 +34,37 @@ class EventLoop : noncopyable
 {
 public:
   EventLoop();
+  
+  // force out-line dtor, for scoped_ptr members.
   ~EventLoop();
 
+  ///
+  /// Loops forever.
+  ///
+  /// Must be called in the same thread as creation of the object.
+  ///
   void loop();
   void quit();
+
+  // TODO:返回值返回的原始指针，可能有问题。
+  // timers
+  ///
+  /// Runs callback at 'time'.
+  ///
+  TimerId runAt(const Timestamp&time,const TimerCallback &cb);
+  ///
+  /// Runs callback every @c interval seconds.
+  ///
+  TimerId runEvery(double interval,const TimerCallback&cb);
+  ///
+  /// Runs callback after @c delay seconds.
+  ///
+  TimerId runAfter(double delay,const TimerCallback&cb);
+
+  // void cancel(TimerId timerId);
+
+  // internal use only
+  void updateChannel(Channel* channel);
 
   void assertInLoopThread(){
     if(!isInLoopThread())
@@ -39,9 +73,12 @@ public:
     }
   }
 
-  // internal use only
-  void updateChannel(Channel* channel);
   bool isInLoopThread()const{return threadId_==CurrentThread::tid();};
+
+  ///
+  /// Runs callback at 'time'.
+  ///
+  
 
 private:
   void abortNotInloopThread();
@@ -53,6 +90,7 @@ private:
 
   ChannelList activeChannels_;
   std::unique_ptr<Poller> poller_;
+  std::unique_ptr<TimerQueue>timerQueue_;
 };
 } // namespace muduo
 

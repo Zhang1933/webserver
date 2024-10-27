@@ -9,8 +9,11 @@
 
 #include "muduo/base/CurrentThread.h"
 #include "muduo/base/Logging.h"
+#include "muduo/base/Timestamp.h"
 #include "muduo/net/Channel.h"
 #include "muduo/net/Poller.h"
+#include "muduo/net/TimerId.h"
+#include "muduo/net/TimerQueue.h"
 
 #include <assert.h>
 #include <cstddef>
@@ -24,8 +27,10 @@ const int kPollTimesMs=10000;
 
 EventLoop::EventLoop()
   :looping_(false),
+  quit_(false),
   threadId_(CurrentThread::tid()),
-  poller_(new Poller(this))
+  poller_(new Poller(this)),
+  timerQueue_(new TimerQueue(this))
 {
   LOG_TRACE << "EventLoop created " << this << " in thread " << threadId_;
   if (t_loopInThisThread)
@@ -81,4 +86,21 @@ void EventLoop::quit()
 {
   quit_=true;
   //wakeup()
+}
+
+TimerId  EventLoop::runAt(const Timestamp&time,const TimerCallback &cb){
+    return timerQueue_->addTimer(cb, time, 0);
+}
+
+
+TimerId EventLoop::runAfter(double delay,const TimerCallback&cb)
+{
+  Timestamp time(addTime(Timestamp::now(),delay));
+  return runAt(time, cb);
+}
+
+TimerId EventLoop::runEvery(double interval, const TimerCallback &cb)
+{
+  Timestamp time(addTime(Timestamp::now(), interval));
+  return timerQueue_->addTimer(cb, time, interval);
 }
