@@ -1,0 +1,75 @@
+#ifndef MUDUO_NET_TCPCONNECTION_H
+#define MUDUO_NET_TCPCONNECTION_H
+
+#include "muduo/base/noncopyable.h"
+#include "muduo/net/Callback.h"
+#include "muduo/net/InetAddress.h"
+#include <memory>
+#include <string>
+namespace muduo {
+
+class EventLoop;
+class Channel;
+class Socket;
+
+///
+/// TCP connection, for both client and server usage.
+///
+class TcpConnection:noncopyable,
+    public std::enable_shared_from_this<TcpConnection>
+{
+public:
+
+  /// Constructs a TcpConnection with a connected sockfd
+  ///
+  /// User should not create this object.
+    TcpConnection(EventLoop *loop,const std::string&name,
+                int sockfd,
+                const InetAddress& localAddr,
+                const InetAddress& peerAddr);
+    ~TcpConnection();
+
+    bool connected() const { return state_ == kConnected; }
+  const std::string& name() const { return name_; }
+  const InetAddress& localAddress() { return localAddr_; }
+  const InetAddress& peerAddress() { return peerAddr_; }
+
+    void setConnectionCallback(const ConnectionCallback& cb)
+    {connectionCallback_=cb;}
+    void setMessageCallback(const MessageCallback& cb)
+    {messageCallback_=cb;}
+
+    /// Internal use only.
+    void setCloseCallback(const CloseCallback& cb)
+    { closeCallback_ = cb; }
+    // called when TcpServer accepts a new connection
+    void connectEstablished();// should be called only once
+    // called when TcpServer has removed me from its map
+    void connectDestroyed();  // should be called only once
+
+
+private:
+      enum StateE { kConnecting, kConnected, kDisconnected, };
+    void handleRead();
+    void handleWrite();//handleWrite()  暂时为空。Channel 的 CloseCallback 会调用 TcpConnection::handleClose(),依此  类推
+    void handleClose();
+    void handleError(); 
+    void setState(StateE s){state_=s;};
+
+    EventLoop*loop_;
+    std::string  name_;
+    StateE state_; // FIXME: use atomic variable
+  // we don't expose those classes to client.
+    std::unique_ptr<Socket> socket_;
+    std::unique_ptr<Channel>channel_;
+    InetAddress localAddr_;
+    InetAddress peerAddr_;
+    ConnectionCallback connectionCallback_;
+    MessageCallback messageCallback_;
+    CloseCallback closeCallback_;
+};
+
+}
+
+
+#endif

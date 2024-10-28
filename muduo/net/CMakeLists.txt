@@ -10,6 +10,8 @@ Acceptor.cc
 InetAddress.cc
 Socket.cc
 SocketsOps.cc
+TcpConnection.cc
+TcpServer.cc
 )
 
 add_library(muduo_net ${net_SRCS})
@@ -30,6 +32,8 @@ Acceptor.h
 InetAddress.h
 Socket.h
 SocketsOps.h
+TcpConnection.h
+TcpServer.h
 )
 
 install(FILES ${HEADERS} DESTINATION include/muduo/net)

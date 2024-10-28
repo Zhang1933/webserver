@@ -14,6 +14,7 @@ public:
     typedef  std::function<void()>EventCallback;
 
     Channel(EventLoop *loop,int fd);
+    ~Channel();
     void handleEvent();
     void setReadCallback(const EventCallback &cb)\
     { readCallback_=cb; }
@@ -21,6 +22,8 @@ public:
     { writeCallback_ = cb; }
     void setErrorCallback(const EventCallback& cb)
     { errorCallback_ = cb; }
+    void setCloseCallback(const EventCallback& cb)
+    { closeCallback_ = cb; }
    
     EventLoop*ownerLoop(){return loop_;}
     int fd()const {return fd_;}
@@ -33,9 +36,9 @@ public:
     bool isNoneEvent()const{return events_==kNoneEvent;}
 
     void enableReading() { events_ |= kReadEvent;update();}
-    // void enableWriting(){events_|=kWriteEvent;update();}
-    // void disableWriting(){events_&=!kWriteEvent;update();}
-    // void disableAll() { events_ = kNoneEvent; update(); }
+    void enableWriting(){events_|=kWriteEvent;update();}
+    void disableWriting(){events_&=!kWriteEvent;update();}
+    void disableAll() { events_ = kNoneEvent; update(); }
 
 private:
     void update();
@@ -50,10 +53,12 @@ private:
     int revents_;//revents_ 是目前活动的事件
     int index_; // used by poller
 
+    bool eventHandling_;
 
     EventCallback readCallback_;
     EventCallback writeCallback_;
     EventCallback errorCallback_;
+    EventCallback closeCallback_;
 };
 
 }

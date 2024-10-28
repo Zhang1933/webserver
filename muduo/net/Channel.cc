@@ -1,4 +1,5 @@
 #include "Channel.h"
+#include <cassert>
 #include <poll.h>
 #include <sys/poll.h>
 #include "muduo/base/Logging.h"
@@ -14,8 +15,14 @@ Channel::Channel(EventLoop *loop,int fdArg)
     fd_(fdArg),
     events_(0),
     revents_(0),
-    index_(-1)
+    index_(-1),
+    eventHandling_(false)
 {
+}
+
+Channel::~Channel()
+{
+    assert(!eventHandling_);//断言(assert())在事件处  理期间本 Channel 对象不会析构
 }
 
 void Channel::update()
@@ -25,8 +32,13 @@ void Channel::update()
 
 void Channel::handleEvent()
 {
+    eventHandling_=true;
     if(revents_&POLLNVAL){
         LOG_WARN << "Channel::handle_event() POLLNVAL";
+    }
+    if ((revents_ & POLLHUP) && !(revents_ & POLLIN)) {
+    LOG_WARN << "Channel::handle_event() POLLHUP";
+        if (closeCallback_) closeCallback_();
     }
     if(revents_&(POLLNVAL|POLLERR)){
         if(errorCallback_)errorCallback_();
@@ -37,4 +49,5 @@ void Channel::handleEvent()
     if(revents_&POLLOUT){
         if(writeCallback_)writeCallback_();
     }
+    eventHandling_=false;
 }

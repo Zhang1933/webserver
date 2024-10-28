@@ -35,13 +35,13 @@ const int kPollTimesMs=10000;
 
 static int createEventfd()
 {
-  int evvtfd=::eventfd(0,EFD_NONBLOCK | EFD_CLOEXEC);
-  if(evvtfd<0)
+  int evtfd=::eventfd(0,EFD_NONBLOCK | EFD_CLOEXEC);
+  if(evtfd<0)
   {
     LOG_SYSERR << "Failed in eventfd";
      abort();
   }
-  return  evvtfd;
+  return  evtfd;
 }
 
 EventLoop::EventLoop()
@@ -193,4 +193,11 @@ void EventLoop::handleRead()
   {
      LOG_ERROR << "EventLoop::handleRead() reads " << n << " bytes instead of 8";
   }
+}
+
+void EventLoop::removeChannel(Channel* channel)
+{
+  assert(channel->ownerLoop() == this);
+  assertInLoopThread();
+  poller_->removeChannel(channel);
 }
