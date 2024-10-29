@@ -4,16 +4,19 @@
 #include <functional>
 #include <memory>
 #include <sys/types.h>
+#include "muduo/base/Timestamp.h"
+
 namespace muduo {
 
 class TcpConnection;
+class Buffer;
 typedef  std::shared_ptr<TcpConnection> TcpConnectionPtr;
 // All client visible callbacks go here.
 typedef std::function<void()> TimerCallback;
 typedef std::function<void (const TcpConnectionPtr&)> ConnectionCallback;
 typedef std::function<void (const TcpConnectionPtr&,
-                            const char*,
-                            ssize_t)> MessageCallback;
+                              Buffer* buf,
+                              Timestamp)> MessageCallback;
 typedef std::function<void(const TcpConnectionPtr&)>CloseCallback;
 
 }

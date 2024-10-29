@@ -12,6 +12,7 @@ Socket.cc
 SocketsOps.cc
 TcpConnection.cc
 TcpServer.cc
+Buffer.cc
 )
 
 add_library(muduo_net ${net_SRCS})
@@ -34,6 +35,7 @@ Socket.h
 SocketsOps.h
 TcpConnection.h
 TcpServer.h
+Buffer.h
 )
 
 install(FILES ${HEADERS} DESTINATION include/muduo/net)

@@ -32,6 +32,7 @@ public:
   /// On error, -1 is returned, and *peeraddr is untouched.
   int accept(InetAddress* peeraddr);
 
+void shutdownWrite();
   ///
   /// Enable/disable SO_REUSEADDR
   ///

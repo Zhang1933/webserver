@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <sys/uio.h>  // readv
 
 using namespace muduo;
 
@@ -161,5 +162,18 @@ int sockets::getSocketError(int sockfd)
   else
   {
     return optval;
+  }
+}
+
+ssize_t sockets::readv(int sockfd, const struct iovec *iov, int iovcnt)
+{
+  return ::readv(sockfd, iov, iovcnt);
+}
+
+void sockets::shutdownWrite(int sockfd)
+{
+  if (::shutdown(sockfd, SHUT_WR) < 0)
+  {
+    LOG_SYSERR << "sockets::shutdownWrite";
   }
 }

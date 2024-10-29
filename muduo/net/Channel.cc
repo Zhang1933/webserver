@@ -3,6 +3,7 @@
 #include <poll.h>
 #include <sys/poll.h>
 #include "muduo/base/Logging.h"
+#include "muduo/base/Timestamp.h"
 
 using namespace muduo;
 
@@ -30,7 +31,7 @@ void Channel::update()
     loop_->updateChannel(this);
 }
 
-void Channel::handleEvent()
+void Channel::handleEvent(Timestamp receiveTime)
 {
     eventHandling_=true;
     if(revents_&POLLNVAL){
@@ -44,7 +45,7 @@ void Channel::handleEvent()
         if(errorCallback_)errorCallback_();
     }
     if(revents_&(POLLIN|POLLPRI|POLLRDHUP)){
-        if(readCallback_)readCallback_();
+        if(readCallback_)readCallback_(receiveTime);
     }
     if(revents_&POLLOUT){
         if(writeCallback_)writeCallback_();

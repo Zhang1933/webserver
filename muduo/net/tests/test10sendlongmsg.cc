@@ -1,9 +1,12 @@
-//接受连接：图 8-4、断开连接：图 8-5
-#include "muduo/base/Logging.h"
 #include "muduo/net/TcpServer.h"
 #include "muduo/net/EventLoop.h"
 #include "muduo/net/InetAddress.h"
+#include "muduo/base/Logging.h"
+#include <cstddef>
 #include <stdio.h>
+
+std::string message1;
+std::string message2;
 
 void onConnection(const muduo::TcpConnectionPtr& conn)
 {
@@ -12,6 +15,9 @@ void onConnection(const muduo::TcpConnectionPtr& conn)
     printf("onConnection(): new connection [%s] from %s\n",
            conn->name().c_str(),
            conn->peerAddress().toHostPort().c_str());
+    conn->send(message1);
+    conn->send(message2);
+    conn->shutdown();
   }
   else
   {
@@ -29,12 +35,27 @@ void onMessage(const muduo::TcpConnectionPtr& conn,
          conn->name().c_str(),
          receiveTime.toFormattedString().c_str());
 
-  printf("onMessage(): [%s]\n", buf->retrieveAsString().c_str());
+  buf->retrieveAll();
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+  muduo::Logger::setLogLevel(muduo::Logger::TRACE);
   printf("main(): pid = %d\n", getpid());
+
+  int len1 = 5000;
+  int len2 = 8000;
+
+  if (argc > 2)
+  {
+    len1 = atoi(argv[1]);
+    len2 = atoi(argv[2]);
+  }
+
+  message1.resize(static_cast<size_t>(len1) );
+  message2.resize(static_cast<size_t>(len2));
+  std::fill(message1.begin(), message1.end(), 'A');
+  std::fill(message2.begin(), message2.end(), 'B');
 
   muduo::InetAddress listenAddr(9981);
   muduo::EventLoop loop;

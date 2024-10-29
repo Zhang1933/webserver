@@ -98,7 +98,7 @@ private:
   bool quit_;
   bool callingPendingFunctors_;
   const pid_t threadId_;
-
+  Timestamp pollReturnTime_;
 
   std::unique_ptr<Poller> poller_;
   std::unique_ptr<TimerQueue>timerQueue_;

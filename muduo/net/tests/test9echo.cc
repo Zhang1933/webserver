@@ -1,8 +1,7 @@
-//接受连接：图 8-4、断开连接：图 8-5
-#include "muduo/base/Logging.h"
 #include "muduo/net/TcpServer.h"
 #include "muduo/net/EventLoop.h"
 #include "muduo/net/InetAddress.h"
+#include "muduo/base/Logging.h"
 #include <stdio.h>
 
 void onConnection(const muduo::TcpConnectionPtr& conn)
@@ -29,11 +28,13 @@ void onMessage(const muduo::TcpConnectionPtr& conn,
          conn->name().c_str(),
          receiveTime.toFormattedString().c_str());
 
-  printf("onMessage(): [%s]\n", buf->retrieveAsString().c_str());
+  conn->send(buf->retrieveAsString());
 }
 
 int main()
 {
+muduo::Logger::setLogLevel(muduo::Logger::TRACE);
+
   printf("main(): pid = %d\n", getpid());
 
   muduo::InetAddress listenAddr(9981);

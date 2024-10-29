@@ -4,6 +4,7 @@
 #include "muduo/base/noncopyable.h"
 #include "muduo/net/Callback.h"
 #include "muduo/net/InetAddress.h"
+#include "muduo/net/Buffer.h"
 #include <memory>
 #include <string>
 namespace muduo {
@@ -34,6 +35,13 @@ public:
   const InetAddress& localAddress() { return localAddr_; }
   const InetAddress& peerAddress() { return peerAddr_; }
 
+    void send(const void* message, size_t len);
+    // Thread safe.
+    void send(const std::string& message);
+    // Thread safe.
+    void shutdown();
+    void shutdownInLoop();
+
     void setConnectionCallback(const ConnectionCallback& cb)
     {connectionCallback_=cb;}
     void setMessageCallback(const MessageCallback& cb)
@@ -49,12 +57,13 @@ public:
 
 
 private:
-      enum StateE { kConnecting, kConnected, kDisconnected, };
-    void handleRead();
+    enum StateE { kConnecting, kConnected, kDisconnecting, kDisconnected, };
+    void handleRead(Timestamp receiveTime);
     void handleWrite();//handleWrite()  暂时为空。Channel 的 CloseCallback 会调用 TcpConnection::handleClose(),依此  类推
     void handleClose();
-    void handleError(); 
+    void handleError();
     void setState(StateE s){state_=s;};
+    void sendInLoop(const std::string& message);
 
     EventLoop*loop_;
     std::string  name_;
@@ -67,6 +76,8 @@ private:
     ConnectionCallback connectionCallback_;
     MessageCallback messageCallback_;
     CloseCallback closeCallback_;
+    Buffer inputBuffer_;
+    Buffer outputBuffer_;
 };
 
 }
