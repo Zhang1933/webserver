@@ -12,8 +12,9 @@ class EventLoop;
 
 class EventLoopThread:noncopyable{
 public:
-
-    EventLoopThread();
+typedef std::function<void(EventLoop*)> ThreadInitCallback;
+    EventLoopThread(const ThreadInitCallback& cb = ThreadInitCallback(),
+                  const string& name = string());
     ~EventLoopThread();
 
 
@@ -21,7 +22,7 @@ public:
 
 private:
     void threadFunc();
-    EventLoop * loop_;
+    EventLoop * loop_; // 栈上对象
     bool exiting_;
     Thread thread_;
     MutexLock mutex_;

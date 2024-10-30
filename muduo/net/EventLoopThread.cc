@@ -8,7 +8,8 @@
 
 using namespace muduo;
 
-EventLoopThread::EventLoopThread()
+EventLoopThread::EventLoopThread(const ThreadInitCallback& cb,
+                                 const string& name)
     :loop_(nullptr),
     exiting_(false),
     thread_(std::bind(&EventLoopThread::threadFunc,this)),

@@ -30,7 +30,8 @@ public:
                 const InetAddress& peerAddr);
     ~TcpConnection();
 
-    bool connected() const { return state_ == kConnected; }
+  EventLoop* getLoop() const { return loop_; }
+  bool connected() const { return state_ == kConnected; }
   const std::string& name() const { return name_; }
   const InetAddress& localAddress() { return localAddr_; }
   const InetAddress& peerAddress() { return peerAddr_; }

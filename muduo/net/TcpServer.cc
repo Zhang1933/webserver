@@ -5,6 +5,7 @@
 #include "muduo/net/EventLoop.h"
 #include "muduo/net/InetAddress.h"
 #include "muduo/net/TcpConnection.h"
+#include "muduo/net/EventLoopThreadPool.h"
 #include <cassert>
 #include <cstddef>
 #include <functional>
@@ -19,6 +20,7 @@ TcpServer::TcpServer(EventLoop *loop,const InetAddress& listenAddr)
     name_(listenAddr.toHostPort()),
     started_(false),
     acceptor_(new Acceptor(loop,listenAddr)),
+    threadPool_(new EventLoopThreadPool(loop)),
     nextConnId_(1)
 {
     acceptor_->setNewConnectionCallback(
@@ -28,11 +30,19 @@ TcpServer::~TcpServer()
 {
 }
 
+void TcpServer::setThreadNum(int numThreads)
+{
+  assert(0 <= numThreads);
+  threadPool_->setThreadNum(numThreads);
+}
+
+
 void TcpServer::start()
 {
     if(!started_)
     {
         started_=true;
+        threadPool_->start();
     }
     if(!acceptor_->listening())
     {
@@ -54,24 +64,33 @@ void TcpServer::newConnection(int sockfd, const InetAddress& peerAddr)
            << "] from " << peerAddr.toHostPort();
   InetAddress localAddr(sockets::getLocalAddr(sockfd));
   // FIXME poll with zero timeout to double confirm the new connection
+  // FIXME use make_shared if necessary
+  EventLoop* ioLoop = threadPool_->getNextLoop();
   TcpConnectionPtr conn(
-      new TcpConnection(loop_, connName, sockfd, localAddr, peerAddr));
+      new TcpConnection(ioLoop, connName, sockfd, localAddr, peerAddr));
   connections_[connName] = conn;
   conn->setConnectionCallback(connectionCallback_);
   conn->setMessageCallback(messageCallback_);
   conn->setWriteCompleteCallback(writeCompleteCallback_);
   conn->setCloseCallback(
       std::bind(&TcpServer::removeConnection, this, std::placeholders::_1)); // FIXME: unsafe
-  conn->connectEstablished();
+  ioLoop->runInLoop(std::bind(&TcpConnection::connectEstablished, conn));
 }
 
 void TcpServer::removeConnection(const TcpConnectionPtr& conn)
 {
-    loop_->assertInLoopThread();
-    LOG_INFO << "TcpServer::removeConnection [" << name_
-        << "] - connection " << conn->name();
-    size_t n=connections_.erase(conn->name());
-    assert(n==1);(void)n;
-    loop_->queueInLoop(
+  // FIXME: unsafe
+  loop_->runInLoop(std::bind(&TcpServer::removeConnectionInLoop, this, conn));
+}
+
+void TcpServer::removeConnectionInLoop(const TcpConnectionPtr& conn)
+{
+  loop_->assertInLoopThread();
+  LOG_INFO << "TcpServer::removeConnectionInLoop [" << name_
+           << "] - connection " << conn->name();
+  size_t n = connections_.erase(conn->name());
+  assert(n == 1); (void)n;
+  EventLoop* ioLoop = conn->getLoop();
+  ioLoop->queueInLoop(
       std::bind(&TcpConnection::connectDestroyed, conn));
 }

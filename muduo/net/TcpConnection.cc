@@ -132,7 +132,7 @@ void TcpConnection::handleWrite()
                         outputBuffer_.peek(),
                         outputBuffer_.readableBytes());
     if (n > 0) {
-      outputBuffer_.retrieve(n);
+      outputBuffer_.retrieve(static_cast<size_t>(n));
       if (outputBuffer_.readableBytes() == 0) {
         channel_->disableWriting();
         if (writeCompleteCallback_) {
@@ -189,7 +189,7 @@ void TcpConnection::sendInLoop(const std::string& message)
 
   assert(nwrote >= 0);
   if (implicit_cast<size_t>(nwrote) < message.size()) {
-    outputBuffer_.append(message.data()+nwrote, message.size()-nwrote);
+    outputBuffer_.append(message.data()+nwrote, message.size()-static_cast<size_t>(nwrote));
     if (!channel_->isWriting()) {
       channel_->enableWriting();
     }
