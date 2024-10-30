@@ -26,9 +26,9 @@
 #include <vector>
 
 #include <sys/eventfd.h>
+#include <signal.h>
 
 using namespace muduo;
-
 
 __thread EventLoop* t_loopInThisThread=0;
 const int kPollTimesMs=10000;
@@ -43,6 +43,17 @@ static int createEventfd()
   }
   return  evtfd;
 }
+
+class IgnoreSigPipe
+{
+ public:
+  IgnoreSigPipe()
+  {
+    ::signal(SIGPIPE, SIG_IGN);
+  }
+};
+
+IgnoreSigPipe initObj;
 
 EventLoop::EventLoop()
   :looping_(false),

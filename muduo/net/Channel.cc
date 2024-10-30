@@ -34,6 +34,7 @@ void Channel::update()
 void Channel::handleEvent(Timestamp receiveTime)
 {
     eventHandling_=true;
+    LOG_TRACE<<"handleEvent fd:"<<this->fd()<<" event"<<this->revents_;
     if(revents_&POLLNVAL){
         LOG_WARN << "Channel::handle_event() POLLNVAL";
     }

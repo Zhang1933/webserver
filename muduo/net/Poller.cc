@@ -19,37 +19,40 @@ Poller::~Poller()
 {
 }
 
-void Poller::updateChannel(Channel * channel)
+void Poller::updateChannel(Channel* channel)
 {
-    assertInLoopThread();// 线程会监听多个fd,TODO:文件描述符管只能给一个channel管？
-    LOG_TRACE << "fd = " << channel->fd() << " events = " << channel->events();
-    if(channel->index()<0)
-    {
-        //a new one,add to pollfds_
-        assert(channels_.find(channel->fd())==channels_.end());
-        struct pollfd pfd;
-        pfd.fd=channel->fd();
-        pfd.events=static_cast<short>(channel->events());
-        pfd.revents=0;
-        pollfds_.push_back(pfd);
-        int idx=static_cast<int>(pollfds_.size())-1;
-        channel->set_index(idx);
-        channels_[pfd.fd]=channel;
-    }else{
-        // update existing one
-        assert(channels_.find(channel->fd())!=channels_.end());
-        assert(channels_[channel->fd()]==channel);
-        int idx=channel->index();
-        assert(0 <= idx && idx < static_cast<int>(pollfds_.size()));
-        struct pollfd &pfd=pollfds_[static_cast<size_t>(idx)];
-        assert(pfd.fd==channel->fd()||pfd.fd==-channel->fd()-1);
-        pfd.events=static_cast<short>(channel->events());
-        pfd.revents=0;
-        if(channel->isNoneEvent()){
-            // ignore this pollfd
-            pfd.fd=-channel->fd()-1;
-        }
+  assertInLoopThread();
+  LOG_TRACE << "fd = " << channel->fd() << " events = " << channel->events();
+  if (channel->index() < 0) {
+    // a new one, add to pollfds_
+    assert(channels_.find(channel->fd()) == channels_.end());
+    struct pollfd pfd;
+    pfd.fd = channel->fd();
+    pfd.events = static_cast<short>(channel->events());
+    pfd.revents = 0;
+    pollfds_.push_back(pfd);
+    int idx = static_cast<int>(pollfds_.size())-1;
+    channel->set_index(idx);
+    channels_[pfd.fd] = channel;
+  } else {
+    // update existing one
+    assert(channels_.find(channel->fd()) != channels_.end());
+    assert(channels_[channel->fd()] == channel);
+    int idx = channel->index();
+    assert(0 <= idx && idx < static_cast<int>(pollfds_.size()));
+    struct pollfd& pfd = pollfds_[idx];
+    assert(pfd.fd == channel->fd() || pfd.fd == -channel->fd()-1);
+    pfd.events = static_cast<short>(channel->events());
+    pfd.revents = 0;
+    if (channel->isNoneEvent()) {
+      // ignore this pollfd
+      pfd.fd = -channel->fd()-1;
     }
+    // if(!channel->isNoneEvent())
+    // {
+    //     assert(pfd.fd>0);
+    // }
+  }
 }
 
 Timestamp Poller::poll(int timeoutMs,ChannelList* activeChannels)

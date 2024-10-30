@@ -38,6 +38,11 @@ void shutdownWrite();
   ///
   void setReuseAddr(bool on);
 
+    ///
+  /// Enable/disable TCP_NODELAY (disable/enable Nagle's algorithm).
+  ///
+  void setTcpNoDelay(bool on);
+
  private:
   const int sockfd_;
 };

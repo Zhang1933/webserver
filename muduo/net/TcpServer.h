@@ -34,6 +34,12 @@ public:
   void setMessageCallback(const MessageCallback& cb)
   { messageCallback_ = cb; }
 
+  /// Set write complete callback.
+  /// Not thread safe.
+  void setWriteCompleteCallback(const WriteCompleteCallback& cb)
+  { writeCompleteCallback_ = cb; }
+
+
 private:
     typedef std::map<std::string, TcpConnectionPtr> ConnectionMap;
   /// Not thread safe, but in loop
@@ -45,6 +51,7 @@ private:
     std::unique_ptr<Acceptor>acceptor_; // avoid revealing Acceptor
     ConnectionCallback connectionCallback_;
     MessageCallback messageCallback_;
+    WriteCompleteCallback writeCompleteCallback_;
     int nextConnId_;// always in loop thread
     ConnectionMap connections_;
 };

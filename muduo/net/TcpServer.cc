@@ -15,7 +15,7 @@
 using namespace muduo;
 
 TcpServer::TcpServer(EventLoop *loop,const InetAddress& listenAddr)
-    :loop_(loop),
+    :loop_(CHECK_NOTNULL(loop)),
     name_(listenAddr.toHostPort()),
     started_(false),
     acceptor_(new Acceptor(loop,listenAddr)),
@@ -41,25 +41,28 @@ void TcpServer::start()
     }
 }
 
-void TcpServer::newConnection(int sockfd,const InetAddress&peerAddr)
+void TcpServer::newConnection(int sockfd, const InetAddress& peerAddr)
 {
-    loop_->assertInLoopThread();
-    char buf[32];
-    snprintf(buf, sizeof buf, "#%d", nextConnId_);
-    ++nextConnId_;
-    std::string connName=name_+buf;
-      LOG_INFO << "TcpServer::newConnection [" << name_
+  loop_->assertInLoopThread();
+  char buf[32];
+  snprintf(buf, sizeof buf, "#%d", nextConnId_);
+  ++nextConnId_;
+  std::string connName = name_ + buf;
+
+  LOG_INFO << "TcpServer::newConnection [" << name_
            << "] - new connection [" << connName
            << "] from " << peerAddr.toHostPort();
-    InetAddress localAddr(sockets::getLocalAddr(sockfd));
-    // FIXME poll with zero timeout to double confirm the new connection
-    TcpConnectionPtr conn = std::make_shared<TcpConnection>(loop_, connName, sockfd, localAddr, peerAddr);
-    connections_[connName]=conn;
-    conn->setConnectionCallback(connectionCallback_);
-    conn->setMessageCallback(messageCallback_);
-    conn->setCloseCallback(
-      std::bind(&TcpServer::removeConnection, this, std::placeholders::_1));
-    conn->connectEstablished();
+  InetAddress localAddr(sockets::getLocalAddr(sockfd));
+  // FIXME poll with zero timeout to double confirm the new connection
+  TcpConnectionPtr conn(
+      new TcpConnection(loop_, connName, sockfd, localAddr, peerAddr));
+  connections_[connName] = conn;
+  conn->setConnectionCallback(connectionCallback_);
+  conn->setMessageCallback(messageCallback_);
+  conn->setWriteCompleteCallback(writeCompleteCallback_);
+  conn->setCloseCallback(
+      std::bind(&TcpServer::removeConnection, this, std::placeholders::_1)); // FIXME: unsafe
+  conn->connectEstablished();
 }
 
 void TcpServer::removeConnection(const TcpConnectionPtr& conn)

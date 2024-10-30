@@ -28,7 +28,8 @@ TcpConnection::TcpConnection(EventLoop *loop,const std::string&nameArg,
             << " fd=" << sockfd;
     channel_->setReadCallback(
       std::bind(&TcpConnection::handleRead, this, std::placeholders::_1));
-          std::bind(&TcpConnection::handleWrite, this);
+    channel_->setWriteCallback(
+      std::bind(&TcpConnection::handleWrite, this));
     channel_->setCloseCallback(
       std::bind(&TcpConnection::handleClose, this));
     channel_->setErrorCallback(
@@ -118,28 +119,38 @@ void TcpConnection::shutdownInLoop()
     }
 }
 
+void TcpConnection::setTcpNoDelay(bool on)
+{
+  socket_->setTcpNoDelay(on);
+}
+
 void TcpConnection::handleWrite()
 {
-    loop_->assertInLoopThread();
-    if(channel_->isWriting())
-    {
-        ssize_t n=::write(channel_->fd(),outputBuffer_.peek(),outputBuffer_.readableBytes());
-        if(n>0){
-            outputBuffer_.retrieve(implicit_cast<size_t>(n));
-            if(outputBuffer_.readableBytes()==0){
-                channel_->disableWriting(); // 防止busyloop
-                if(state_==kDisconnecting){
-                    shutdownInLoop();
-                }
-            }else{
-                LOG_TRACE << "I am going to write more data";
-            }
-        }else{
-            LOG_SYSERR << "TcpConnection::handleWrite";
+  loop_->assertInLoopThread();
+  if (channel_->isWriting()) {
+    ssize_t n = ::write(channel_->fd(),
+                        outputBuffer_.peek(),
+                        outputBuffer_.readableBytes());
+    if (n > 0) {
+      outputBuffer_.retrieve(n);
+      if (outputBuffer_.readableBytes() == 0) {
+        channel_->disableWriting();
+        if (writeCompleteCallback_) {
+          loop_->queueInLoop(
+              std::bind(writeCompleteCallback_, shared_from_this()));
         }
-    }else{
-        LOG_INFO << "name: "<<name_<<" Connection is down, no more writing";
+        if (state_ == kDisconnecting) {
+          shutdownInLoop();
+        }
+      } else {
+        LOG_TRACE << "I am going to write more data";
+      }
+    } else {
+      LOG_SYSERR << "TcpConnection::handleWrite";
     }
+  } else {
+    LOG_TRACE << "Connection is down, no more writing";
+  }
 }
 
 void TcpConnection::send(const std::string& message)
@@ -158,12 +169,15 @@ void TcpConnection::sendInLoop(const std::string& message)
 {
   loop_->assertInLoopThread();
   ssize_t nwrote = 0;
-  // if no thing in output queue, try writing directly,buffer里面为空，尝试直接写。
+  // if no thing in output queue, try writing directly
   if (!channel_->isWriting() && outputBuffer_.readableBytes() == 0) {
     nwrote = ::write(channel_->fd(), message.data(), message.size());
     if (nwrote >= 0) {
       if (implicit_cast<size_t>(nwrote) < message.size()) {
         LOG_TRACE << "I am going to write more data";
+      } else if (writeCompleteCallback_) {
+        loop_->queueInLoop(
+            std::bind(writeCompleteCallback_, shared_from_this()));
       }
     } else {
       nwrote = 0;
@@ -172,10 +186,10 @@ void TcpConnection::sendInLoop(const std::string& message)
       }
     }
   }
-    // 一个channel只负责一个fd，不会串话。
+
   assert(nwrote >= 0);
   if (implicit_cast<size_t>(nwrote) < message.size()) {
-    outputBuffer_.append(message.data()+nwrote, message.size()-implicit_cast<size_t>(nwrote));
+    outputBuffer_.append(message.data()+nwrote, message.size()-nwrote);
     if (!channel_->isWriting()) {
       channel_->enableWriting();
     }
