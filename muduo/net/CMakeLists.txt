@@ -2,6 +2,9 @@ set(net_SRCS
 EventLoop.cc
 Channel.cc
 Poller.cc
+poller/DefaultPoller.cc
+poller/EPollPoller.cc
+poller/PollPoller.cc
 Timer.cc
 TimerId.cc
 TimerQueue.cc
@@ -23,26 +26,20 @@ target_link_libraries(muduo_net muduo_base)
 
 install(TARGETS muduo_net DESTINATION lib)
 
+
 set(HEADERS
-EventLoop.h
-Channel.h
-Poller.h
-Timer.h
-TimerId.h
-TimerQueue.h
-Callback.h
-EventLoopThread.h
-Acceptor.h
-InetAddress.h
-Socket.h
-SocketsOps.h
-TcpConnection.h
-TcpServer.h
-Buffer.h
-EventLoopThreadPool.h
-Connector.h
-TcpClient.h
-)
+  Buffer.h
+  Callbacks.h
+  Channel.h
+  EventLoop.h
+  EventLoopThread.h
+  EventLoopThreadPool.h
+  InetAddress.h
+  TcpClient.h
+  TcpConnection.h
+  TcpServer.h
+  TimerId.h
+  )
 
 install(FILES ${HEADERS} DESTINATION include/muduo/net)
 

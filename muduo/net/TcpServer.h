@@ -18,6 +18,10 @@ public:
     TcpServer(EventLoop *loop,const InetAddress& listenAddr);
     ~TcpServer(); // force out-line dtor, for scoped_ptr members.
 
+    EventLoop* getLoop() const { return loop_; }
+    const string& name() const { return name_; }
+    const string& ipPort() const { return name_; } //TODO： name与ipPort分开
+
     /// Set the number of threads for handling input.
     ///
     /// Always accepts new connection in loop's thread.
@@ -61,7 +65,7 @@ private:
     void removeConnection(const TcpConnectionPtr& conn);
     /// Not thread safe, but in loop
     void removeConnectionInLoop(const TcpConnectionPtr& conn);
-    
+
     EventLoop* loop_; // the acceptor loop
     const std::string name_;
     bool started_;

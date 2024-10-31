@@ -1,9 +1,10 @@
 #include "Channel.h"
 #include <cassert>
 #include <poll.h>
-#include <sys/poll.h>
 #include "muduo/base/Logging.h"
 #include "muduo/base/Timestamp.h"
+#include <sstream>
+
 
 using namespace muduo;
 
@@ -61,4 +62,36 @@ void Channel::remove()
   assert(isNoneEvent());
   addedToLoop_ = false;
   loop_->removeChannel(this);
+}
+
+string Channel::reventsToString() const
+{
+  return eventsToString(fd_, revents_);
+}
+
+string Channel::eventsToString() const
+{
+  return eventsToString(fd_, events_);
+}
+
+string Channel::eventsToString(int fd, int ev)
+{
+  std::ostringstream oss;
+  oss << fd << ": ";
+  if (ev & POLLIN)
+    oss << "IN ";
+  if (ev & POLLPRI)
+    oss << "PRI ";
+  if (ev & POLLOUT)
+    oss << "OUT ";
+  if (ev & POLLHUP)
+    oss << "HUP ";
+  if (ev & POLLRDHUP)
+    oss << "RDHUP ";
+  if (ev & POLLERR)
+    oss << "ERR ";
+  if (ev & POLLNVAL)
+    oss << "NVAL ";
+
+  return oss.str();
 }

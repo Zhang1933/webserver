@@ -15,30 +15,29 @@ class Channel;
 class Poller:noncopyable{
 public:
     Poller(EventLoop* loop);
-    ~Poller();
+    virtual ~Poller();
     /// Changes the interested I/O events.
     /// Must be called in the loop thread.
-    void updateChannel(Channel *channel);
+    virtual void updateChannel(Channel *channel)=0;
     /// Remove the channel, when it destructs.
     /// Must be called in the loop thread.
-    void removeChannel(Channel* channel);
+    virtual void removeChannel(Channel* channel)=0;
 
     /// Polls the I/O events.
     /// Must be called in the loop thread.
-    Timestamp poll(int timeoutMs,ChannelList* activeChannels);
-    void assertInLoopThread(){ownerLoop_->assertInLoopThread();};
+    virtual Timestamp poll(int timeoutMs,ChannelList* activeChannels)=0;
+    void assertInLoopThread()const{ownerLoop_->assertInLoopThread();};
 
+    virtual bool hasChannel(Channel* channel) const;
+
+  static Poller* newDefaultPoller(EventLoop* loop);
+
+
+protected:
+    typedef std::map<int, Channel*> ChannelMap;
+    ChannelMap channels_;
 private:
     EventLoop* ownerLoop_;
-    typedef std::map<int, Channel*> ChannelMap;
-    typedef std::vector<struct pollfd> PollFdList;
-
-    PollFdList pollfds_;
-    ChannelMap channels_;
-
-    void fillActiveChannels(int numEvents,
-        ChannelList* activeChannels
-    )const;
 };
 }
 

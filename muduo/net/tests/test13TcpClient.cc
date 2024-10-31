@@ -6,8 +6,6 @@
 
 #include "muduo/base/Logging.h"
 
-#include <boost/bind.hpp>
-
 #include <utility>
 
 #include <stdio.h>

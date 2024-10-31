@@ -44,8 +44,13 @@ public:
     
     void remove();
     
+      // for debug
+  string reventsToString() const;
+  string eventsToString() const;
+
 private:
     void update();
+    static string eventsToString(int fd, int ev);
 
     static const int kNoneEvent;
     static const int kReadEvent;
