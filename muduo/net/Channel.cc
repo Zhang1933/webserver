@@ -17,13 +17,15 @@ Channel::Channel(EventLoop *loop,int fdArg)
     events_(0),
     revents_(0),
     index_(-1),
-    eventHandling_(false)
+    eventHandling_(false),
+    addedToLoop_(false)
 {
 }
 
 Channel::~Channel()
 {
-    assert(!eventHandling_);//断言(assert())在事件处  理期间本 Channel 对象不会析构
+    assert(!addedToLoop_);
+    assert(!eventHandling_);//断言(assert())在事件处 理期间本 Channel 对象不会析构
 }
 
 void Channel::update()
@@ -52,4 +54,11 @@ void Channel::handleEvent(Timestamp receiveTime)
         if(writeCallback_)writeCallback_();
     }
     eventHandling_=false;
+}
+
+void Channel::remove()
+{
+  assert(isNoneEvent());
+  addedToLoop_ = false;
+  loop_->removeChannel(this);
 }

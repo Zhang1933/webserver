@@ -71,7 +71,8 @@ public:
   ///
   TimerId runAfter(double delay,const TimerCallback&cb);
 
-  // void cancel(TimerId timerId);
+  // cancel 定时器事件
+  void cancel(TimerId timerId);
   
   // internal use only
   void wakeup();

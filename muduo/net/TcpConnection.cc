@@ -12,6 +12,22 @@
 
 using namespace muduo;
 
+
+void muduo::defaultConnectionCallback(const TcpConnectionPtr& conn)
+{
+  LOG_TRACE << conn->localAddress().toHostPort() << " -> "
+            << conn->peerAddress().toHostPort() << " is "
+            << (conn->connected() ? "UP" : "DOWN");
+  // do not call conn->forceClose(), because some users want to register message callback only.
+}
+
+void muduo::defaultMessageCallback(const TcpConnectionPtr&,
+                                        Buffer* buf,
+                                        Timestamp)
+{
+  buf->retrieveAll();
+}
+
 TcpConnection::TcpConnection(EventLoop *loop,const std::string&nameArg,
                 int sockfd,
                 const InetAddress& localAddr,

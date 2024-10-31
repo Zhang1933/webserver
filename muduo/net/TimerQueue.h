@@ -37,12 +37,17 @@ public:
     Timestamp when,
     double interval);
 
+    void cancel(TimerId timerId);
+    void cancelInLoop(TimerId timerId);
 
-
-    // void cancel(TimerId timerId);
 private:
+  // FIXME: use unique_ptr<Timer> instead of raw pointers.
+  // This requires heterogeneous comparison lookup (N3465) from C++14
+  // so that we can find an T* in a set<unique_ptr<T>>.
     typedef std::pair<Timestamp, Timer*> Entry;
     typedef std::set<Entry> TimerList;
+    typedef std::pair<Timer*, int64_t> ActiveTimer;
+    typedef std::set<ActiveTimer> ActiveTimerSet;
 
     bool insert(Timer* timer);
     
@@ -60,6 +65,11 @@ private:
     Channel timerfdChannel_;
      // Timer list sorted by expiration
     TimerList timers_;
+
+      // for cancel()
+  ActiveTimerSet activeTimers_;
+  bool callingExpiredTimers_; /* atomic */
+  ActiveTimerSet cancelingTimers_;
 };
 }
 #endif  // MUDUO_NET_TIMERQUEUE_H

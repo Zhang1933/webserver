@@ -20,6 +20,11 @@ typedef std::function<void (const TcpConnectionPtr&,
 typedef std::function<void (const TcpConnectionPtr&)> WriteCompleteCallback;
 typedef std::function<void(const TcpConnectionPtr&)>CloseCallback;
 
+void defaultConnectionCallback(const TcpConnectionPtr& conn);
+void defaultMessageCallback(const TcpConnectionPtr& conn,
+                            Buffer* buffer,
+                            Timestamp receiveTime);
+
 }
 
 #endif

@@ -14,6 +14,8 @@ TcpConnection.cc
 TcpServer.cc
 Buffer.cc
 EventLoopThreadPool.cc
+Connector.cc
+TcpClient.cc
 )
 
 add_library(muduo_net  ${net_SRCS})
@@ -38,6 +40,8 @@ TcpConnection.h
 TcpServer.h
 Buffer.h
 EventLoopThreadPool.h
+Connector.h
+TcpClient.h
 )
 
 install(FILES ${HEADERS} DESTINATION include/muduo/net)

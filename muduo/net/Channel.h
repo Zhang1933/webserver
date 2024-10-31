@@ -42,6 +42,8 @@ public:
     void disableAll() { events_ = kNoneEvent; update(); }
     bool isWriting() const { return events_ & kWriteEvent; }
     
+    void remove();
+    
 private:
     void update();
 
@@ -56,6 +58,7 @@ private:
     int index_; // used by poller
 
     bool eventHandling_;
+    bool addedToLoop_;
 
     ReadEventCallback readCallback_;
     EventCallback writeCallback_;

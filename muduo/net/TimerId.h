@@ -9,16 +9,22 @@ namespace muduo {
 ///
 /// An opaque identifier, for canceling Timer.
 ///
-class TimerId:muduo::copyable{
-public:
-    explicit TimerId(Timer* timer)
-    :value_(timer)
-    {
-    }
-    // default copy-ctor, dtor and assignment are okay
+class TimerId : public muduo::copyable
+{
+ public:
+  TimerId(Timer* timer = NULL, int64_t seq = 0)
+    : timer_(timer),
+      sequence_(seq)
+  {
+  }
 
-private:
-    Timer* value_;
+  // default copy-ctor, dtor and assignment are okay
+
+  friend class TimerQueue;
+
+ private:
+  Timer* timer_;
+  int64_t sequence_;
 };
 }
 
