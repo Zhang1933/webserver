@@ -142,7 +142,9 @@ int main(int argc, char* argv[])
   getcwd(buffer, 1024);
   rootPath=buffer;
   rootPath+="/root";
-  int numThreads = 0;
+  int numThreads = 1;
+  int idleSeconds = 10;
+  int maxconnection=4;
   if (argc > 1)
   {
     benchmark = true;
@@ -150,7 +152,7 @@ int main(int argc, char* argv[])
     numThreads = atoi(argv[1]);
   }
   EventLoop loop;
-  HttpServer server(&loop, InetAddress(8008), "dummy");
+  HttpServer server(&loop, InetAddress(8008), "dummy",idleSeconds,maxconnection);
   server.setHttpCallback(onRequest);
   server.setThreadNum(numThreads);
   server.start();

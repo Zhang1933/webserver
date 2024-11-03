@@ -13,8 +13,10 @@ class EventLoop;
 class Acceptor;
 class EventLoopThreadPool;
 
-class TcpServer{
+class TcpServer: noncopyable{
 public:
+    typedef std::function<void(EventLoop*)> ThreadInitCallback;
+
     TcpServer(EventLoop *loop,const InetAddress& listenAddr);
     ~TcpServer(); // force out-line dtor, for scoped_ptr members.
 
@@ -33,7 +35,8 @@ public:
     /// - N means a thread pool with N threads, new connections
     ///   are assigned on a round-robin basis.
     void setThreadNum(int numThreads);
-
+    void setThreadInitCallback(const ThreadInitCallback& cb)
+    { threadInitCallback_ = cb; }
     /// Starts the server if it's not listenning.
     ///
     /// It's harmless to call it multiple times.
@@ -72,6 +75,7 @@ private:
     std::unique_ptr<Acceptor>acceptor_; // avoid revealing Acceptor
     std::unique_ptr<EventLoopThreadPool> threadPool_;
 
+    ThreadInitCallback threadInitCallback_;
     ConnectionCallback connectionCallback_;
     MessageCallback messageCallback_;
     WriteCompleteCallback writeCompleteCallback_;

@@ -88,6 +88,16 @@ public:
 
   bool isInLoopThread()const{return threadId_==CurrentThread::tid();};
 
+  void setContext(const boost::any& context)
+  { context_ = context; }
+
+  const boost::any& getContext() const
+  { return context_; }
+
+  boost::any* getMutableContext()
+  { return &context_; }
+
+
 private:
 
   void abortNotInloopThread();
@@ -109,6 +119,8 @@ private:
   std::unique_ptr<Channel>wakeupChannel_;
   MutexLock mutex_;
   std::vector<Functor>pendingFunctors_; // @GuardedBy mutex_
+
+  boost::any context_;
 };
 } // namespace muduo
 

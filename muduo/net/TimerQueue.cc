@@ -212,7 +212,7 @@ TimerId TimerQueue::addTimer(const TimerCallback&cb,
 void TimerQueue::addTimerInLoop(Timer* timer)
 {
     loop_->assertInLoopThread();
-     bool earliestChanged = insert(timer);
+    bool earliestChanged = insert(timer);
     if(earliestChanged)
     {
         resetTimerfd(timerfd_,timer->expiration());

@@ -1,11 +1,15 @@
 #include "muduo/net/http/HttpServer.h"
 
 #include "muduo/base/Logging.h"
+#include "muduo/base/Types.h"
+#include "muduo/net/EventLoop.h"
 #include "muduo/net/http/HttpContext.h"
 #include "muduo/net/http/HttpRequest.h"
 #include "muduo/net/http/HttpResponse.h"
 #include <cassert>
+#include <cstddef>
 #include <functional>
+#include <sys/types.h>
 #include <utility>
 
 using namespace muduo;
@@ -26,9 +30,12 @@ void defaultHttpCallback(const HttpRequest&, HttpResponse* resp)
 
 HttpServer::HttpServer(EventLoop* loop,
                        const InetAddress& listenAddr,
-                       const string& name)
+                       const string& name,int idleSeconds,int maxConnections)
   : server_(loop, listenAddr),
-    httpCallback_(detail::defaultHttpCallback)
+    idleSeconds_(idleSeconds),
+    httpCallback_(detail::defaultHttpCallback),
+    kMaxConnections_(maxConnections),
+    numConnected_(0)
 {
   server_.setConnectionCallback(
       std::bind(&HttpServer::onConnection, this, std::placeholders::_1));
@@ -37,6 +44,12 @@ HttpServer::HttpServer(EventLoop* loop,
   server_.setWriteCompleteCallback(
     std::bind(&HttpServer::onWriteComplete, this, _1)
   );
+  // 设置ontimer,清除不活跃链接。TODD:发送消息时，也更新时间，不算成idleconnection
+  server_.setThreadInitCallback(
+    [this](EventLoop* ioloop) {
+        ioloop->setContext(WeakConnectionList());// 初始化
+        ioloop->runEvery(1.0, std::bind(&HttpServer::onTimer,this,ioloop));
+    });
 }
 
 void HttpServer::start()
@@ -48,17 +61,54 @@ void HttpServer::start()
 
 void HttpServer::onConnection(const TcpConnectionPtr& conn)
 {
+  LOG_INFO << "HttpServer - " << conn->peerAddress().toHostPort() << " -> "
+           << conn->localAddress().toHostPort() << " is "
+           << (conn->connected() ? "UP" : "DOWN");
+  WeakConnectionList* connectionList= boost::any_cast<WeakConnectionList>(conn->getLoop()->getMutableContext());
   if (conn->connected())
   {
+    ++numConnected_;
+    if (numConnected_ > kMaxConnections_)
+    {
+      LOG_DEBUG<<"excceed MaxConnections,shutdown conn,numConnected:"<<numConnected_;
+      conn->shutdown();
+      conn->forceCloseWithDelay(3.0);  // > round trip of the whole Internet.
+    }
+    Node node;
+    node.lastReceiveTime = Timestamp::now(); 
+    connectionList->push_back(conn);
+    node.position = --connectionList->end();
+    conn->setTimerContext(node);
+
     conn->setContext(HttpContext());
   }
+  else
+  {
+    assert(!conn->getMutableTimerContext()->empty());
+    Node* node = boost::any_cast<Node>(conn->getMutableTimerContext());
+    connectionList->erase(node->position);
+    conn->getMutableTimerContext()->clear();
+    --numConnected_;
+  }
+  dumpConnectionList(connectionList);
 }
-// 一个连接要发多个文件
+
 void HttpServer::onMessage(const TcpConnectionPtr& conn,
                            Buffer* buf,
                            Timestamp receiveTime)
 {
   HttpContext* context = boost::any_cast<HttpContext>(conn->getMutableContext());
+
+  assert(!conn->getMutableTimerContext()->empty());
+  conn->getLoop()->assertInLoopThread();
+
+  Node* node = boost::any_cast<Node>(conn->getMutableTimerContext());
+  node->lastReceiveTime = receiveTime;
+  WeakConnectionList* connectionList= boost::any_cast<WeakConnectionList>(conn->getLoop()->getMutableContext());
+  connectionList->splice(connectionList->end(), *connectionList, node->position);
+  assert(node->position == --connectionList->end());
+
+  dumpConnectionList(connectionList);
 
   if (!context->parseRequest(buf, receiveTime))
   {
@@ -87,7 +137,6 @@ void HttpServer::onRequest(const TcpConnectionPtr& conn, HttpContext* context)
     assert(fp);
     FilePtr ctx(fp, ::fclose);
     conn->setFileContext(filectxPii(ctx,close));
-
   }
   else 
   {
@@ -111,7 +160,7 @@ void HttpServer::onWriteComplete(const TcpConnectionPtr& conn)
     }
     else 
     {
-        fpii.first.reset();
+        fpii.first.reset(); // FIXME:错误处理
         if(fpii.second)
         {
           conn->shutdown();
@@ -125,5 +174,69 @@ void HttpServer::onWriteComplete(const TcpConnectionPtr& conn)
       {
         conn->shutdown();
       }
+  }
+}
+
+void HttpServer::dumpConnectionList(WeakConnectionList* connectionList_) const
+{
+  if(muduo::Logger::logLevel() > muduo::Logger::DEBUG)return;
+  LOG_INFO << "size = " << connectionList_->size();
+
+  for (WeakConnectionList::const_iterator it = connectionList_->begin();
+      it != connectionList_->end(); ++it)
+  {
+    TcpConnectionPtr conn = it->lock();
+    if (conn)
+    {
+      printf("conn %p ,", (conn.get()));
+      Node* n = boost::any_cast<Node>(conn->getMutableTimerContext());
+      printf("    time %s\n", n->lastReceiveTime.toString().c_str());
+    }
+    else
+    {
+      printf("expired\n");
+    }
+  }
+}
+
+void HttpServer::onTimer(EventLoop* ioloop)
+{
+  ioloop->assertInLoopThread();
+  Timestamp now = Timestamp::now();
+  WeakConnectionList* connectionList= boost::any_cast<WeakConnectionList>(ioloop->getMutableContext());
+  dumpConnectionList(connectionList);
+    for (WeakConnectionList::iterator it = connectionList->begin();
+      it != connectionList->end();)
+  {
+    TcpConnectionPtr conn = it->lock();
+    if (conn)
+    {
+      Node* n = boost::any_cast<Node>(conn->getMutableTimerContext());
+      double age = timeDifference(now, n->lastReceiveTime);
+      if (age > idleSeconds_)
+      {
+        if (conn->connected())
+        {
+          conn->shutdown();
+          LOG_INFO << "shutting down " << conn->name();
+          conn->forceCloseWithDelay(3.5);  // > round trip of the whole Internet.
+        }
+      }
+      else if (age < 0)
+      {
+        LOG_WARN << "Time jump";
+        n->lastReceiveTime = now;
+      }
+      else
+      {
+        break;
+      }
+      ++it;
+    }
+    else
+    {
+      LOG_WARN << "Expired";
+      it = connectionList->erase(it);
+    }
   }
 }

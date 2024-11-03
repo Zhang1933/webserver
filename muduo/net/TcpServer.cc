@@ -9,6 +9,7 @@
 #include <cassert>
 #include <cstddef>
 #include <functional>
+#include <memory>
 #include <string>
 #include"muduo/net/SocketsOps.h"
 
@@ -28,6 +29,16 @@ TcpServer::TcpServer(EventLoop *loop,const InetAddress& listenAddr)
 }
 TcpServer::~TcpServer()
 {
+  loop_->assertInLoopThread();
+  LOG_TRACE << "TcpServer::~TcpServer [" << name_ << "] destructing";
+
+  for (auto& item : connections_)
+  {
+    TcpConnectionPtr conn(item.second);
+    item.second.reset();
+    conn->getLoop()->runInLoop(
+      std::bind(&TcpConnection::connectDestroyed, conn));
+  }
 }
 
 void TcpServer::setThreadNum(int numThreads)
@@ -42,7 +53,7 @@ void TcpServer::start()
     if(!started_)
     {
         started_=true;
-        threadPool_->start();
+        threadPool_->start(threadInitCallback_);
     }
     if(!acceptor_->listening())
     {
@@ -67,13 +78,13 @@ void TcpServer::newConnection(int sockfd, const InetAddress& peerAddr)
   // FIXME use make_shared if necessary
   EventLoop* ioLoop = threadPool_->getNextLoop();
   TcpConnectionPtr conn(
-      new TcpConnection(ioLoop, connName, sockfd, localAddr, peerAddr));
+      std::make_shared<TcpConnection>(ioLoop, connName, sockfd, localAddr, peerAddr));
   connections_[connName] = conn;
   conn->setConnectionCallback(connectionCallback_);
   conn->setMessageCallback(messageCallback_);
   conn->setWriteCompleteCallback(writeCompleteCallback_);
   conn->setCloseCallback(
-      std::bind(&TcpServer::removeConnection, this, std::placeholders::_1)); // FIXME: unsafe
+      std::bind(&TcpServer::removeConnection, this,_1)); // TODO:不调用TcpServer::removeConnection
   ioLoop->runInLoop(std::bind(&TcpConnection::connectEstablished, conn));
 }
 

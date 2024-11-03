@@ -10,6 +10,7 @@
 #include <string>
 #include <sys/types.h>
 #include <unistd.h>
+#include "muduo/base/WeakCallback.h"
 
 using namespace muduo;
 
@@ -60,6 +61,38 @@ TcpConnection::~TcpConnection()
             << " fd=" << channel_->fd();
 }
 
+void TcpConnection::forceClose()
+{
+  // FIXME: use compare and swap
+  if (state_ == kConnected || state_ == kDisconnecting)
+  {
+    setState(kDisconnecting);
+    loop_->queueInLoop(std::bind(&TcpConnection::forceCloseInLoop, shared_from_this()));
+  }
+}
+
+void TcpConnection::forceCloseWithDelay(double seconds)
+{
+  if (state_ == kConnected || state_ == kDisconnecting)
+  {
+    setState(kDisconnecting);
+    loop_->runAfter(
+        seconds,
+        makeWeakCallback(shared_from_this(),
+                         &TcpConnection::forceClose));  // not forceCloseInLoop to avoid race condition
+  }
+}
+
+void TcpConnection::forceCloseInLoop()
+{
+  loop_->assertInLoopThread();
+  if (state_ == kConnected || state_ == kDisconnecting)
+  {
+    // as if we received 0 byte in handleRead();
+    handleClose();
+  }
+}
+
 void TcpConnection::handleRead(Timestamp receiveTime)
 {
     loop_->assertInLoopThread();
@@ -79,11 +112,14 @@ void TcpConnection::handleRead(Timestamp receiveTime)
 void TcpConnection::handleClose()
 {
     loop_->assertInLoopThread();
-    LOG_TRACE << "fd = " << channel_->fd() << " state = " << stateToString();
     assert(state_ == kConnected|| state_ == kDisconnecting);
     // we don't close fd, leave it to dtor, so we can find leaks easily.
+    setState(kDisconnected);
     channel_->disableAll();
     // must be the last line。TcpConnection::handleClose() 的主要功能是调用 closeCallback_,这个回调  绑定到 TcpServer::removeConnection()
+    TcpConnectionPtr guardThis(shared_from_this());
+    connectionCallback_(guardThis);
+    // must be the last line
     closeCallback_(shared_from_this());
 }
 
@@ -108,12 +144,14 @@ void TcpConnection::connectEstablished()
 void TcpConnection::connectDestroyed()
 {
   loop_->assertInLoopThread();
-  assert(state_ == kConnected || state_ == kDisconnecting);
-  setState(kDisconnected);
-  channel_->disableAll();
-  connectionCallback_(shared_from_this());
+  if (state_ == kConnected)
+  {
+    setState(kDisconnected);
+    channel_->disableAll();
 
-  loop_->removeChannel(channel_.get());
+    connectionCallback_(shared_from_this());
+  }
+  channel_->remove();
 }
 
 void TcpConnection::shutdown()
@@ -132,6 +170,7 @@ void TcpConnection::shutdownInLoop()
     loop_->assertInLoopThread();
     if(!channel_->isWriting())
     {
+        LOG_TRACE<<"con"<<name_<<"shut down writing,state_:"<<state_;
         // we are not writing
         socket_->shutdownWrite();
     }

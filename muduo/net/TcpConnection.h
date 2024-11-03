@@ -73,12 +73,22 @@ public:
     boost::any* getMutableContext()
     { return &context_; }
 
+    // 文件相关的context
     void setFileContext(const boost::any& fcontext)
     {fileContext_=fcontext;}
     boost::any& getFileContext()
     { return fileContext_; }
     boost::any* getMutableFileContext()
     { return &fileContext_; }
+
+    // 时间事件相关的context，TODO：几个context可以合成一个
+    void setTimerContext(const boost::any& tcontext)
+    {timerContext_=tcontext;}
+    boost::any* getMutableTimerContext()
+    { return &timerContext_; }
+
+    void forceClose();
+    void forceCloseWithDelay(double seconds);
 
 private:
     enum StateE { kConnecting, kConnected, kDisconnecting, kDisconnected, };
@@ -88,17 +98,18 @@ private:
     void handleError();
     void setState(StateE s){state_=s;};
     void sendInLoop(const std::string& message);
+    void forceCloseInLoop();
 
     const char* stateToString() const;
     
     EventLoop*loop_;
-    std::string  name_;
+    const std::string  name_;
     StateE state_; // FIXME: use atomic variable
   // we don't expose those classes to client.
     std::unique_ptr<Socket> socket_;
     std::unique_ptr<Channel>channel_;
-    InetAddress localAddr_;
-    InetAddress peerAddr_;
+    const InetAddress localAddr_;
+    const InetAddress peerAddr_;
     ConnectionCallback connectionCallback_;
     MessageCallback messageCallback_;
     WriteCompleteCallback writeCompleteCallback_;
@@ -109,6 +120,7 @@ private:
     boost::any context_;
     // 与文件发送有关的context
     boost::any fileContext_;
+    boost::any timerContext_;
 };
 
 }

@@ -4,6 +4,9 @@
 #include "muduo/net/TcpServer.h"
 #include "muduo/net/http/HttpContext.h"
 #include <memory>
+#include <atomic>
+#include <list>
+#include <boost/circular_buffer.hpp>
 
 namespace muduo
 {
@@ -26,7 +29,8 @@ class HttpServer : noncopyable
 
   HttpServer(EventLoop* loop,
              const InetAddress& listenAddr,
-             const string& name
+             const string& name,
+             int idleSeconds,int maxConnections
              );
 
   EventLoop* getLoop() const { return server_.getLoop(); }
@@ -51,9 +55,23 @@ class HttpServer : noncopyable
                  Timestamp receiveTime);
   void onRequest(const TcpConnectionPtr&, HttpContext*);
   void onWriteComplete(const TcpConnectionPtr& conn);
+  void onTimer(EventLoop* ioloop);
+  
+  typedef std::weak_ptr<TcpConnection> WeakTcpConnectionPtr;
+  typedef std::list<WeakTcpConnectionPtr> WeakConnectionList;
+  struct Node : public muduo::copyable
+  {
+    Timestamp lastReceiveTime;
+    WeakConnectionList::iterator position;
+  };
+  void  dumpConnectionList(WeakConnectionList* connectionList)const;
 
   TcpServer server_;
+  int idleSeconds_;
+
   HttpCallback httpCallback_;
+  const int kMaxConnections_;
+  std::atomic<int> numConnected_;
 };
 
 }  // namespace muduo

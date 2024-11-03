@@ -27,6 +27,7 @@ private:
     Thread thread_;
     MutexLock mutex_;
     Condition cond_;
+    ThreadInitCallback callback_;
 };
 }
 
