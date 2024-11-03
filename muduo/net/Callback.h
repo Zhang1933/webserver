@@ -8,6 +8,10 @@
 
 namespace muduo {
 
+using std::placeholders::_1;
+using std::placeholders::_2;
+using std::placeholders::_3;
+
 class TcpConnection;
 class Buffer;
 typedef  std::shared_ptr<TcpConnection> TcpConnectionPtr;

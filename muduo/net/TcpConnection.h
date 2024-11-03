@@ -7,6 +7,8 @@
 #include "muduo/net/Buffer.h"
 #include <memory>
 #include <string>
+#include <boost/any.hpp>
+
 namespace muduo {
 
 class EventLoop;
@@ -40,6 +42,7 @@ public:
     // Thread safe.
     void send(const std::string& message);
     // Thread safe.
+    void send(Buffer* message);  // this one will swap data
     void shutdown();
     void shutdownInLoop();
 
@@ -61,6 +64,21 @@ public:
     // called when TcpServer has removed me from its map
     void connectDestroyed();  // should be called only once
 
+    void setContext(const boost::any& context)
+    { context_ = context; }
+
+    const boost::any& getContext() const
+    { return context_; }
+
+    boost::any* getMutableContext()
+    { return &context_; }
+
+    void setFileContext(const boost::any& fcontext)
+    {fileContext_=fcontext;}
+    boost::any& getFileContext()
+    { return fileContext_; }
+    boost::any* getMutableFileContext()
+    { return &fileContext_; }
 
 private:
     enum StateE { kConnecting, kConnected, kDisconnecting, kDisconnected, };
@@ -71,6 +89,8 @@ private:
     void setState(StateE s){state_=s;};
     void sendInLoop(const std::string& message);
 
+    const char* stateToString() const;
+    
     EventLoop*loop_;
     std::string  name_;
     StateE state_; // FIXME: use atomic variable
@@ -85,6 +105,10 @@ private:
     CloseCallback closeCallback_;
     Buffer inputBuffer_;
     Buffer outputBuffer_;
+
+    boost::any context_;
+    // 与文件发送有关的context
+    boost::any fileContext_;
 };
 
 }

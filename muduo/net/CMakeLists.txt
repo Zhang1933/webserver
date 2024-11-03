@@ -21,7 +21,7 @@ Connector.cc
 TcpClient.cc
 )
 
-add_library(muduo_net  ${net_SRCS})
+add_library(muduo_net ${net_SRCS})
 target_link_libraries(muduo_net muduo_base)
 
 install(TARGETS muduo_net DESTINATION lib)
@@ -47,3 +47,5 @@ if(MUDUO_BUILD_EXAMPLES)
   message(STATUS "build tests")
   add_subdirectory(tests)
 endif()
+
+add_subdirectory(http)

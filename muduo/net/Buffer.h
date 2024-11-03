@@ -6,6 +6,8 @@
 #include <cstddef>
 #include <string>
 #include <vector>
+#include <algorithm>
+
 
 namespace muduo
 {
@@ -57,6 +59,13 @@ public:
     const char* peek() const
     { return begin() + readerIndex_; }
 
+  const char* findCRLF() const
+  {
+    // FIXME: replace with memmem()?
+    const char* crlf = std::search(peek(), beginWrite(), kCRLF, kCRLF+2);
+    return crlf == beginWrite() ? NULL : crlf;
+  }
+
     // retrieve returns void, to prevent
     // string str(retrieve(readableBytes()), readableBytes());
     // the evaluation of two functions are unspecified
@@ -79,6 +88,7 @@ public:
         writerIndex_ = kCheapPrepend;
     }
 
+    // 默认retrieve all string
     std::string retrieveAsString()
     {
         std::string str(peek(), readableBytes());
@@ -86,9 +96,17 @@ public:
         return str;
     }
 
+    std::string retrieveAsString(size_t len)
+    {
+        assert(len <= readableBytes());
+        std::string result(peek(), len);
+        retrieve(len);
+        return result;
+    }
 
     void append(const std::string& str)
     {
+        if(str.empty())return;
         append(str.data(), str.length());
     }
     void append(const char* /*restrict*/ data, size_t len)
@@ -176,6 +194,7 @@ private:
     std::vector<char> buffer_;
     size_t readerIndex_;
     size_t writerIndex_;
+    static const char kCRLF[];
 };
 
 }

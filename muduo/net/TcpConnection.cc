@@ -7,6 +7,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <functional>
+#include <string>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -50,6 +51,7 @@ TcpConnection::TcpConnection(EventLoop *loop,const std::string&nameArg,
       std::bind(&TcpConnection::handleClose, this));
     channel_->setErrorCallback(
       std::bind(&TcpConnection::handleError, this));
+    socket_->setKeepAlive(true);
 }
 
 TcpConnection::~TcpConnection()
@@ -77,7 +79,7 @@ void TcpConnection::handleRead(Timestamp receiveTime)
 void TcpConnection::handleClose()
 {
     loop_->assertInLoopThread();
-    LOG_TRACE << "TcpConnection::handleClose state = " << state_;
+    LOG_TRACE << "fd = " << channel_->fd() << " state = " << stateToString();
     assert(state_ == kConnected|| state_ == kDisconnecting);
     // we don't close fd, leave it to dtor, so we can find leaks easily.
     channel_->disableAll();
@@ -156,6 +158,7 @@ void TcpConnection::handleWrite()
               std::bind(writeCompleteCallback_, shared_from_this()));
         }
         if (state_ == kDisconnecting) {
+          LOG_INFO<<"write complete, state:"<<state_<<"shutdown con";
           shutdownInLoop();
         }
       } else {
@@ -169,6 +172,12 @@ void TcpConnection::handleWrite()
   }
 }
 
+void TcpConnection::send(const void* data, size_t len)
+{
+  send(std::string(static_cast<const char*>(data), len));
+}
+
+
 void TcpConnection::send(const std::string& message)
 {
   if (state_ == kConnected) {
@@ -177,6 +186,27 @@ void TcpConnection::send(const std::string& message)
     } else {
       loop_->runInLoop(
           std::bind(&TcpConnection::sendInLoop, this,message));
+    }
+  }
+}
+
+void TcpConnection::send(Buffer* buf)
+{
+  if (state_ == kConnected)
+  {
+    if (loop_->isInLoopThread())
+    {
+      sendInLoop(buf->retrieveAsString());
+      buf->retrieveAll();
+    }
+    else
+    {
+      void (TcpConnection::*fp)(const std::string& message) = &TcpConnection::sendInLoop;
+      loop_->runInLoop(
+          std::bind(fp,
+                    this,     // FIXME
+                    buf->retrieveAsString()));
+                    //std::forward<string>(message)));
     }
   }
 }
@@ -209,5 +239,22 @@ void TcpConnection::sendInLoop(const std::string& message)
     if (!channel_->isWriting()) {
       channel_->enableWriting();
     }
+  }
+}
+
+const char* TcpConnection::stateToString() const
+{
+  switch (state_)
+  {
+    case kDisconnected:
+      return "kDisconnected";
+    case kConnecting:
+      return "kConnecting";
+    case kConnected:
+      return "kConnected";
+    case kDisconnecting:
+      return "kDisconnecting";
+    default:
+      return "unknown state";
   }
 }

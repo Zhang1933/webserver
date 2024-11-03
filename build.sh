@@ -19,6 +19,8 @@ mkdir -p $BUILD_DIR/$BUILD_TYPE-cpp11 \
            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
            $SOURCE_DIR \
   && make $*
+cd $SOURCE_DIR
+ln -sf  $SOURCE_DIR/root $BUILD_DIR/$BUILD_TYPE-cpp11/bin/root
 
 # Use the following command to run all the unit tests
 # at the dir $BUILD_DIR/$BUILD_TYPE :

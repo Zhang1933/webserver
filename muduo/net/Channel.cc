@@ -36,25 +36,30 @@ void Channel::update()
 
 void Channel::handleEvent(Timestamp receiveTime)
 {
-    eventHandling_=true;
-    LOG_TRACE<<"handleEvent fd:"<<this->fd()<<" event"<<this->revents_;
-    if(revents_&POLLNVAL){
-        LOG_WARN << "Channel::handle_event() POLLNVAL";
-    }
-    if ((revents_ & POLLHUP) && !(revents_ & POLLIN)) {
-    LOG_WARN << "Channel::handle_event() POLLHUP";
-        if (closeCallback_) closeCallback_();
-    }
-    if(revents_&(POLLNVAL|POLLERR)){
-        if(errorCallback_)errorCallback_();
-    }
-    if(revents_&(POLLIN|POLLPRI|POLLRDHUP)){
-        if(readCallback_)readCallback_(receiveTime);
-    }
-    if(revents_&POLLOUT){
-        if(writeCallback_)writeCallback_();
-    }
-    eventHandling_=false;
+  eventHandling_ = true;
+  LOG_TRACE << reventsToString();
+  if ((revents_ & POLLHUP) && !(revents_ & POLLIN))
+  {
+    LOG_WARN << "fd = " << fd_ << " Channel::handle_event() POLLHUP";
+    if (closeCallback_) closeCallback_();
+  }
+  if (revents_ & POLLNVAL)
+  {
+    LOG_WARN << "fd = " << fd_ << " Channel::handle_event() POLLNVAL";
+  }
+  if (revents_ & (POLLERR | POLLNVAL))
+  {
+    if (errorCallback_) errorCallback_();
+  }
+  if (revents_ & (POLLIN | POLLPRI | POLLRDHUP))
+  {
+    if (readCallback_) readCallback_(receiveTime);
+  }
+  if (revents_ & POLLOUT)
+  {
+    if (writeCallback_) writeCallback_();
+  }
+  eventHandling_ = false;
 }
 
 void Channel::remove()

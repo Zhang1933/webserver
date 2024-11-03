@@ -43,6 +43,11 @@ void shutdownWrite();
   ///
   void setTcpNoDelay(bool on);
 
+  ///
+  /// Enable/disable SO_KEEPALIVE
+  ///
+  void setKeepAlive(bool on);
+
  private:
   const int sockfd_;
 };
