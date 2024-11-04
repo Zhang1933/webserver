@@ -5,6 +5,7 @@ set -x
 
 SOURCE_DIR=`pwd`
 BUILD_DIR=${BUILD_DIR:-./build}
+# BUILD_TYPE=${BUILD_TYPE:-Release}
 BUILD_TYPE=${BUILD_TYPE:-Debug}
 INSTALL_DIR=${INSTALL_DIR:-./${BUILD_TYPE}-install-cpp11}
 CXX=${CXX:-g++}

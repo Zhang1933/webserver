@@ -2,6 +2,7 @@
 
 #include "muduo/base/Logging.h"
 #include "muduo/base/Types.h"
+#include "muduo/net/Callback.h"
 #include "muduo/net/EventLoop.h"
 #include "muduo/net/http/HttpContext.h"
 #include "muduo/net/http/HttpRequest.h"
@@ -127,7 +128,9 @@ void HttpServer::onRequest(const TcpConnectionPtr& conn, HttpContext* context)
 {
   HttpRequest& req=context->request();
   const string& connection = req.getHeader("Connection");
-  bool close = connection == "close";
+  bool close = connection == "close" ||
+    (req.getVersion() == HttpRequest::kHttp10 && connection != "keep-alive");
+  LOG_DEBUG<<"keep-alvie?close:"<<close;
   HttpResponse response(close);
   httpCallback_(req, &response);
   Buffer buf;
@@ -135,12 +138,12 @@ void HttpServer::onRequest(const TcpConnectionPtr& conn, HttpContext* context)
   {
     FILE* fp = ::fopen(response.GetretFilePath().c_str(), "rb");
     assert(fp);
-    FilePtr ctx(fp, ::fclose);
-    conn->setFileContext(filectxPii(ctx,close));
+    TcpConnection::FilePtr ctx(fp, ::fclose);
+    conn->setFileContext(TcpConnection::filectxPii(ctx,close));
   }
   else 
   {
-    conn->setFileContext(filectxPii(FilePtr(),close));
+    conn->setFileContext(TcpConnection::filectxPii(TcpConnection::FilePtr(),close));
   }
   conn->send(&buf);
 }
@@ -150,7 +153,7 @@ void HttpServer::onWriteComplete(const TcpConnectionPtr& conn)
   //NOTE: 文件发送，只取决于连接数，不取决于文件大小，drawback：不能支持pipeline。
   const int kBufSize = 64*1024;
   char buf[kBufSize];
-  filectxPii& fpii = boost::any_cast<filectxPii&>(conn->getFileContext());
+  TcpConnection::filectxPii fpii = conn->getFileContext();
   if(fpii.first)
   {
     size_t nread = ::fread(buf, 1, sizeof buf, fpii.first.get());

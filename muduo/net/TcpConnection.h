@@ -22,6 +22,8 @@ class TcpConnection:noncopyable,
     public std::enable_shared_from_this<TcpConnection>
 {
 public:
+  typedef std::shared_ptr<FILE> FilePtr;
+  typedef std::pair<FilePtr, bool> filectxPii;
 
   /// Constructs a TcpConnection with a connected sockfd
   ///
@@ -74,12 +76,10 @@ public:
     { return &context_; }
 
     // 文件相关的context
-    void setFileContext(const boost::any& fcontext)
+    void setFileContext(const filectxPii& fcontext)
     {fileContext_=fcontext;}
-    boost::any& getFileContext()
+    filectxPii& getFileContext()
     { return fileContext_; }
-    boost::any* getMutableFileContext()
-    { return &fileContext_; }
 
     // 时间事件相关的context，TODO：几个context可以合成一个
     void setTimerContext(const boost::any& tcontext)
@@ -119,7 +119,7 @@ private:
 
     boost::any context_;
     // 与文件发送有关的context
-    boost::any fileContext_;
+    filectxPii fileContext_;
     boost::any timerContext_;
 };
 

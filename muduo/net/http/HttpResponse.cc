@@ -8,9 +8,6 @@
 
 using namespace muduo;
 
-typedef std::shared_ptr<FILE> FilePtr;
-
-
 bool HttpResponse::appendToBuffer(Buffer* output)
 {
   char buf[32];

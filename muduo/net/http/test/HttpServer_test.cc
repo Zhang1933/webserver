@@ -9,6 +9,8 @@
 #include <filesystem>
 #include <string>
 #include <utility>
+#include <sys/resource.h>
+
 
 using namespace muduo;
 
@@ -71,6 +73,14 @@ void onRequest(const HttpRequest& req, HttpResponse* resp)
   else if(req.path()=="/")
   {
       resp->setRetfilePath(rootPath+"/judge.html");
+      // resp->setStatusCode(HttpResponse::k200Ok);
+      // resp->setStatusMessage("OK");
+      // resp->setContentType("text/html");
+      // resp->addHeader("Server", "Muduo");
+      // string now = Timestamp::now().toFormattedString();
+      // resp->setBody("<html><head><title>This is title</title></head>"
+      //     "<body><h1>Hello</h1>Now is " + now +
+      //     "</body></html>");
   }
   else if(req.path()=="/0")
   {
@@ -136,15 +146,44 @@ void onRequest(const HttpRequest& req, HttpResponse* resp)
   }
 }
 
+void setSofFileLimit()
+{
+  int err;
+   struct rlimit rlim;
+   err = getrlimit(RLIMIT_NOFILE,&rlim);
+     if (err < 0) {
+        perror("getrlimit");
+        exit(1);
+    }
+  printf("rlim_cur=%lu rlim_max=%lu \n",
+        rlim.rlim_cur,rlim.rlim_max);
+  rlim.rlim_cur=1048576;
+  err = setrlimit(RLIMIT_NOFILE,&rlim);
+  if (err < 0) {
+        perror("setrlimit");
+        exit(1);
+    }
+
+    err = getrlimit(RLIMIT_NOFILE,&rlim);
+    if (err < 0) {
+        perror("setrlimit");
+        exit(1);
+    }
+}
+
 int main(int argc, char* argv[])
 {
+  
+  // Logger::setLogLevel(Logger::INFO);
   char buffer[1024];
-  getcwd(buffer, 1024);
+  char* tmp=getcwd(buffer, 1024);
+  (void)tmp;
   rootPath=buffer;
   rootPath+="/root";
+  setSofFileLimit();
   int numThreads = 1;
   int idleSeconds = 10;
-  int maxconnection=4;
+  int maxconnection=100000;
   if (argc > 1)
   {
     benchmark = true;

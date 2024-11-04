@@ -4,12 +4,14 @@
 #include "muduo/net/InetAddress.h"
 #include "muduo/net/SocketsOps.h"
 #include <stdio.h>
+#include <sys/types.h>
 
 void newConnection(int sockfd, const muduo::InetAddress& peerAddr)
 {
   printf("newConnection(): accepted a new connection from %s\n",
          peerAddr.toHostPort().c_str());
-  ::write(sockfd, "How are you?\n", 13);
+  ssize_t n=::write(sockfd, "How are you?\n", 13);
+  (void)n;
   muduo::sockets::close(sockfd);
 }
 
@@ -17,7 +19,8 @@ void newConnection2(int sockfd, const muduo::InetAddress& peerAddr)
 {
   printf("newConnection2(): accepted a new connection from %s\n",
          peerAddr.toHostPort().c_str());
-  ::write(sockfd, "go to the moon!\n", 17);
+  ssize_t n=::write(sockfd, "go to the moon!\n", 17);
+  (void)n;
   muduo::sockets::close(sockfd);
 }
 

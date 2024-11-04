@@ -21,8 +21,7 @@ class HttpResponse;
 class HttpServer : noncopyable
 {
  public:
-  typedef std::shared_ptr<FILE> FilePtr;
-  typedef std::pair<FilePtr, bool> filectxPii;
+
 
   typedef std::function<void (const HttpRequest&,
                               HttpResponse*)> HttpCallback;

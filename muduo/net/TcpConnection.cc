@@ -112,6 +112,7 @@ void TcpConnection::handleRead(Timestamp receiveTime)
 void TcpConnection::handleClose()
 {
     loop_->assertInLoopThread();
+    LOG_TRACE << "fd = " << channel_->fd() << " state = " << stateToString();
     assert(state_ == kConnected|| state_ == kDisconnecting);
     // we don't close fd, leave it to dtor, so we can find leaks easily.
     setState(kDisconnected);
@@ -125,7 +126,7 @@ void TcpConnection::handleClose()
 
 void TcpConnection::handleError()
 {
-    // TODO: 没有进一步的行动,只是在日志中输出错误消息,为什么不影响连接的正常关闭
+    //  没有进一步的行动,只是在日志中输出错误,不影响连接的正常关闭消息,
   int err = sockets::getSocketError(channel_->fd());
   LOG_ERROR << "TcpConnection::handleError [" << name_
             << "] - SO_ERROR = " << err << " " << strerror_tl(err);
