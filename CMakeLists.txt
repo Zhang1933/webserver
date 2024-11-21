@@ -13,6 +13,8 @@ if(CMAKE_PROJECT_NAME STREQUAL "muduo")
   option(MUDUO_BUILD_EXAMPLES "Build Muduo examples" ON)
 endif()
 
+set(CMAKE_CXX_STANDARD 17)
+
 set(CXX_FLAGS
 ${CXX_FLAGS}
  -g
@@ -31,7 +33,7 @@ ${CXX_FLAGS}
  -Wwrite-strings
  -march=native
  # -MMD
- -std=c++11
+ -std=c++17
  -rdynamic
  )
 if(CMAKE_BUILD_BITS EQUAL 32)

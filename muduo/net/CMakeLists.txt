@@ -49,3 +49,4 @@ if(MUDUO_BUILD_EXAMPLES)
 endif()
 
 add_subdirectory(http)
+add_subdirectory(db)
