@@ -17,14 +17,20 @@
 #ifndef SEWENEW_REDISPLUSPLUS_CONNECTION_POOL_H
 #define SEWENEW_REDISPLUSPLUS_CONNECTION_POOL_H
 
+#include <atomic>
 #include <cassert>
 #include <chrono>
+#include <cstddef>
+#include <functional>
 #include <mutex>
 #include <memory>
 #include <condition_variable>
 #include <deque>
+#include <utility>
+#include "muduo/net/EventLoop.h"
+#include"muduo/net/EventLoopThread.h"
 #include "muduo/net/db/connection.h"
-
+#include<list>
 
 namespace sw {
 
@@ -71,11 +77,31 @@ public:
     Connection create();
 
     ConnectionPool clone();
+    
+    void queueInLoop_try_reconnction(Connection conn);
+    size_t reconneciotn_list_size(){
+        std::unique_lock<std::mutex>unique_lock(_reconneciotn_list_mutex);
+        return _reconneciotn_list.size();
+    }
 
 private:
     void _move(ConnectionPool &&that);
 
-    // Connection _create(SimpleSentinel &sentinel, const ConnectionOptions &opts);
+
+    void try_reconnction(std::list<Connection>::iterator conn);
+
+    std::unique_ptr<muduo::EventLoopThread>_reconnection_thread;
+    struct EventLoopDeleter {
+        void operator()(muduo::EventLoop *loop) const {
+            if (loop != nullptr) {
+                loop->quit();
+            }
+        }
+    };
+    std::unique_ptr<muduo::EventLoop,EventLoopDeleter>_recoonction_loop;
+
+    std::mutex _reconneciotn_list_mutex;
+    std::list<Connection> _reconneciotn_list;
 
     Connection _fetch(std::unique_lock<std::mutex> &lock);
 
@@ -126,7 +152,12 @@ public:
     SafeConnection& operator=(SafeConnection &&) = delete;
 
     ~SafeConnection() {
-        _pool.release(std::move(_connection));
+        if(_connection.broken()){
+            _pool.queueInLoop_try_reconnction(std::move(_connection));
+            
+        }else{
+            _pool.release(std::move(_connection));
+        }
     }
 
     Connection& connection() {

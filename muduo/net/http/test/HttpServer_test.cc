@@ -21,7 +21,6 @@ static std::string rootPath;
 
 typedef std::pair<std::string, std::string> userpasswdpii;
 
-// TOOD: 连接数据库
 // 获得用户名与密码，失败返回fales
 bool getUserNameAndpsss(std::string content,userpasswdpii& userpass)
 {

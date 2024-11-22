@@ -21,6 +21,7 @@
 #include <cerrno>
 #include <cstring>
 #include <memory>
+#include <string_view>
 #include <vector>
 #include <string>
 #include <sstream>
@@ -148,6 +149,11 @@ public:
     }
 
     friend void swap(Connection &lhs, Connection &rhs) noexcept;
+    int reconnectFailedTimes=0;
+
+    std::string getConnecitonINFO(){
+        return _opts._server_info();
+    }
 
 #ifdef REDIS_PLUS_PLUS_RESP_VERSION_3
     void set_push_callback(redisPushFn *push_func);

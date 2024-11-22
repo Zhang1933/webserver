@@ -5,6 +5,7 @@ redis_uri.cpp
 
 add_library(muduo_db ${db_SRCS})
 target_link_libraries(muduo_db muduo_base)
+target_link_libraries(muduo_db muduo_net)
 
 # <------------ add hiredis dependency --------------->
 find_path(HIREDIS_HEADER hiredis)

@@ -16,8 +16,15 @@
 
 #include "muduo/net/db/connection_pool.h"
 #include <cassert>
+#include <chrono>
+#include <functional>
+#include <mutex>
+#include <thread>
+#include <utility>
 #include "muduo/base/Logging.h"
+#include "muduo/net/db/connection.h"
 #include "muduo/net/db/errors.h"
+
 
 namespace sw {
 
@@ -30,9 +37,11 @@ ConnectionPool::ConnectionPool(const ConnectionPoolOptions &pool_opts,
     if (_pool_opts.size == 0) {
         throw Error("CANNOT create an empty pool");
     }
-
+    _reconnection_thread.reset(new muduo::EventLoopThread);
+    _recoonction_loop.reset(_reconnection_thread->startLoop());
     // Lazily create connections.
 }
+
 
 void ConnectionPool::_move(ConnectionPool &&that) {
     _opts = std::move(that._opts);
@@ -76,12 +85,53 @@ Connection ConnectionPool::fetch() {
         } catch (const Error &) {
             // Failed to reconnect, return it to the pool, and retry latter.
             LOG_WARN<<"Failed to reconnect,retry";
-            release(std::move(connection));
+            queueInLoop_try_reconnction(std::move(connection));
             throw;
         }
     }
-
     return connection;
+}
+
+
+
+void ConnectionPool::queueInLoop_try_reconnction(Connection conn){
+    std::list<Connection>::iterator it;
+    {
+        std::unique_lock<std::mutex>unique_lock(_reconneciotn_list_mutex);
+        
+        _reconneciotn_list.push_back(std::move(conn));
+        it=--_reconneciotn_list.end();
+    }
+    _recoonction_loop->queueInLoop(
+        std::bind(
+            &ConnectionPool::try_reconnction,this,it
+        )
+    );
+}
+
+constexpr int MAXRECONNECTIONRETRYTIME=10;
+
+void ConnectionPool::try_reconnction(std::list<Connection>::iterator connection){
+    try{
+        connection->reconnect();
+        {
+            assert(!connection->broken());
+            std::unique_lock<std::mutex>lock(_reconneciotn_list_mutex);
+            release(std::move(*connection));
+            connection=_reconneciotn_list.erase(connection);
+        }
+    }catch(const Error&){
+        if(connection->reconnectFailedTimes<MAXRECONNECTIONRETRYTIME){
+            connection->reconnectFailedTimes++;
+        }
+        LOG_WARN<<"Failed to reconnect,"<<connection->getConnecitonINFO()<<"retry after:2^"<<connection->reconnectFailedTimes;
+        
+        _recoonction_loop->runAfter((1<<connection->reconnectFailedTimes),
+        std::bind(
+            &ConnectionPool::try_reconnction,this,connection
+            )
+        );
+    }
 }
 
 ConnectionOptions ConnectionPool::connection_options() {

@@ -82,8 +82,12 @@ EventLoop::EventLoop()
 
 EventLoop::~EventLoop()
 {
-  assert(!looping_);
-  t_loopInThisThread=NULL;
+  LOG_DEBUG << "EventLoop " << this << " of thread " << threadId_
+            << " destructs in thread " << CurrentThread::tid();
+  wakeupChannel_->disableAll();
+  wakeupChannel_->remove();
+  ::close(wakeupFd_);
+  t_loopInThisThread = NULL;
 }
 
 void EventLoop::loop()
