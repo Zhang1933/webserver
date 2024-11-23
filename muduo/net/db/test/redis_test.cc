@@ -9,8 +9,10 @@ using namespace sw::redis;
 Redis redis = Redis("tcp://root@127.0.0.1:6379?pool_size=3");
 
 int main(){
-
     muduo::Logger::setLogLevel(muduo::Logger::DEBUG);
+
+    
+
     int cnt=4;
     for(int i=0;i<cnt;i++){
         if(i==cnt-1){
@@ -34,9 +36,10 @@ int main(){
             LOG_WARN<<e.what();
         }
     }
-    // do something else
-    //sleep(10);
     
+    // do something else
+    printf("sleep 10");
+    redis.get("nonexistkey");
     LOG_INFO<<"Test success!";
 
 }

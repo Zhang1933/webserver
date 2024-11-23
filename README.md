@@ -64,13 +64,12 @@ Requests: 28878 susceed, 0 failed.
 Lazy conneciton：
 1. 线程向连接池申请连接时，加锁,如果发现已申请连接没达到设定的连接池大小，申请新的空连接，尝试用密码连接redis
     如果在向连接池申请连接时，发现已申请连接达到设定的连接池大小，连接池中没有连接了，等待其他线程释放连接或坏连接变好。
-    
 
 ## 后台自动重连逻辑
 
 
 1. 在连接池没满时，申请新连接的线程会尝试用密码连接redis，失败时，向重连接事件循环中注册重连接任务，向上抛出异常。
-2. 如果连接成功后，发送命令后得到redis回复失败，连接可能断开，向重连接事件循环中注册重连接任务，向上抛出异常，表示命令没有执行成功。
+2. 如果连接成功后，发送命令得到redis回复失败，连接可能坏掉了，向重连接事件循环中注册重连接任务，向上抛出异常，表示命令没有执行成功。
 
 * 后台重连接事件循环线程
 
@@ -79,7 +78,14 @@ Lazy conneciton：
 
 用户可用broken_connection_cnt与连接池大小判断可用连接数。
 
-## TODO:
+## Redis API
 
+Redis command 发送后，调用redisGetReply库函数返回的redisReply指针（封装成unique_ptr），根据指针所指向的内容判断执行情况。
+
+1. set指令发送后，用redisReply判断返回是否为"OK"
+1. get指令发送后, 尝试调用库函数redisGetReply获得执行结果，如果redisReply.type是REDIS_REPLY_ERROR，说明连接出问题，抛出异常,redisReply.str有错误的说明。
+    * 如果得到的执行结果是OK，先判断redisReply.type是否为REDIS_REPLY_NIL,如果是,则说明键不存在.然后判断redisReply.type是否为REDIS_REPLY_STRING,如果是说明有返回值,根据redisReply中的str指针获取返回值。
+
+## TODO:
 
 * 性能调优

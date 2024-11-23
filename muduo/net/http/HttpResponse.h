@@ -17,6 +17,7 @@
 
 #include <map>
 #include <string>
+#include <string_view>
 
 namespace muduo
 {
@@ -26,6 +27,8 @@ class Buffer;
 class HttpResponse : public muduo::copyable
 {
  public:
+
+ static const  std::string RootPath;
   enum HttpStatusCode
   {
     kUnknown,
@@ -40,6 +43,10 @@ class HttpResponse : public muduo::copyable
     statusMessage_("OK"),
     closeConnection_(close)
   {
+  }
+
+  void setCookie(const string& cook,int Max_Age=-1){
+    cookie_=cook+";";
   }
 
   void setStatusCode(HttpStatusCode code)
@@ -65,7 +72,7 @@ class HttpResponse : public muduo::copyable
   { body_ = body; }
 
   void setRetfilePath(const string&path)
-  {retFilePath_=path;}
+  {retFilePath_=RootPath+path;}
 
   // append的时候判断有没有文件需要返回
   bool appendToBuffer(Buffer* output);
@@ -78,6 +85,7 @@ class HttpResponse : public muduo::copyable
   HttpStatusCode statusCode_;
   // FIXME: add http version
   string statusMessage_;
+  string cookie_;
   bool closeConnection_;
   string body_;
   string retFilePath_;

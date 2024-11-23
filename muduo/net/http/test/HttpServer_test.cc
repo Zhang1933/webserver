@@ -16,11 +16,18 @@ using namespace muduo;
 extern char favicon[555];
 bool benchmark = false;
 
-static std::string rootPath;
 
 typedef std::pair<std::string, std::string> userpasswdpii;
 
 auto redis = sw::redis::Redis("tcp://root@127.0.0.1:6379&pool_size=1");
+
+
+bool CookieExist(const HttpRequest& req){
+    auto cookie=req.getHeader("Cookie");
+    if(cookie.empty())return false;
+    auto val=redis.get(cookie);
+    return val.has_value();
+}
 
 // 获得用户名与密码，失败返回fales
 bool getUserNameAndpsss(std::string content,userpasswdpii& userpass)
@@ -72,7 +79,7 @@ void onRequest(const HttpRequest& req, HttpResponse* resp)
   }
   else if(req.path()=="/")
   {
-      resp->setRetfilePath(rootPath+"/judge.html");
+      resp->setRetfilePath("/judge.html");
       // resp->setStatusCode(HttpResponse::k200Ok);
       // resp->setStatusMessage("OK");
       // resp->setContentType("text/html");
@@ -84,7 +91,7 @@ void onRequest(const HttpRequest& req, HttpResponse* resp)
   }
   else if(req.path()=="/0")
   {
-    resp->setRetfilePath(rootPath+"/register.html");
+    resp->setRetfilePath("/register.html");
   }
   else if(req.path()=="/3CGISQL.cgi")
   {
@@ -93,9 +100,9 @@ void onRequest(const HttpRequest& req, HttpResponse* resp)
     string content=req.getBody();
     if(getUserNameAndpsss(content,usrpss))
     {
-        std::cout << usrpss.first << ": " << usrpss.second<< std::endl;
+        //TODO：redis，异常处理
         redis.set(usrpss.first,usrpss.second);
-        resp->setRetfilePath(rootPath+"/log.html");
+        resp->setRetfilePath("/log.html");
     }
     else 
     {
@@ -105,12 +112,22 @@ void onRequest(const HttpRequest& req, HttpResponse* resp)
   }
   else if(req.path()=="/2CGISQL.cgi")
   {
-    // 用户登录,TODO:连接数据库
+    // 用户登录
     userpasswdpii usrpss;
     string content=req.getBody();
     if(getUserNameAndpsss(content,usrpss))
     {
-        resp->setRetfilePath(rootPath+"/welcome.html");
+        auto val=redis.get(usrpss.first);
+        if(val&&*val==usrpss.second){
+            // TODO: 使用随机数设置Cookie
+            auto cook="cookiesTest="+usrpss.first;
+            redis.set(cook,usrpss.first);
+            resp->setCookie(cook);
+            resp->setRetfilePath("/welcome.html");
+        }else{
+          // 没有用户
+            resp->setRetfilePath("/logError.html");
+        }
     }
     else 
     {
@@ -120,24 +137,36 @@ void onRequest(const HttpRequest& req, HttpResponse* resp)
   }
   else if(req.path()=="/5")
   {
-      resp->setRetfilePath(rootPath+"/picture.html");
+      if(CookieExist(req)){
+        resp->setRetfilePath("/picture.html");
+      }else{
+        resp->setRetfilePath("/log.html");
+      }
   }
   else if(req.path()=="/7")
   {
-    resp->setRetfilePath(rootPath+"/fans.html");
+    if(CookieExist(req)){
+      resp->setRetfilePath("/fans.html");
+    }else{
+      resp->setRetfilePath("/log.html");
+    }
   }
   else if(req.path()=="/1")
   {
-      resp->setRetfilePath(rootPath+"/log.html");
+      resp->setRetfilePath("/log.html");
   }
   else if(req.path()=="/6")
   {
-    resp->setRetfilePath(rootPath+"/video.html");
+    if(CookieExist(req)){
+      resp->setRetfilePath("/video.html");
+    }else{
+      resp->setRetfilePath("/log.html");
+    }
   }
   else if(req.path().find(".")!=string::npos)
   {
     // 返回文件
-    resp->setRetfilePath(rootPath+req.path());
+    resp->setRetfilePath(req.path());
   }
   else{
     // 返回404
@@ -176,11 +205,7 @@ int main(int argc, char* argv[])
 {
   
   // Logger::setLogLevel(Logger::INFO);
-  char buffer[1024];
-  char* tmp=getcwd(buffer, 1024);
-  (void)tmp;
-  rootPath=buffer;
-  rootPath+="/root";
+
   setSofFileLimit();
   int numThreads = 1;
   int idleSeconds = 10;

@@ -32,6 +32,12 @@ bool HttpResponse::appendToBuffer(Buffer* output)
     output->append(header.second);
     output->append("\r\n");
   }
+  
+  if(!this->cookie_.empty()){
+      output->append("Set-Cookie: "+this->cookie_);
+      output->append("\r\n");
+  }
+  
   if(retFilePath_.empty())
   {
     snprintf(buf, sizeof buf, "Content-Length: %zd\r\n", body_.size());
@@ -61,3 +67,15 @@ bool HttpResponse::appendToBuffer(Buffer* output)
   }
   return hasfile;
 }
+
+std::string getPwd(){
+  std::string rootPath;
+  char buffer[1024];
+  char* tmp=getcwd(buffer, 1024);
+  (void)tmp;
+  rootPath=buffer;
+  rootPath+="/root/";
+  return rootPath;
+}
+
+const std::string HttpResponse::RootPath=getPwd();
