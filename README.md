@@ -6,11 +6,13 @@
 
 [webbench-1.5](https://github.com/qinguoyi/TinyWebServer/tree/master/test_pressure/webbench-1.5)。
 
-同一台电脑，wsl环境。
+同一台电脑.
+
 
 * 内存：8G
 * CPU: [AMD Ryzen™ 9 7945HX](https://www.amd.com/en/products/processors/laptop/ryzen/7000-series/amd-ryzen-9-7945hx.html)，16核，32线程
 
+### wsl环境
 
 两个服务器程序均开启8线程，返回相同页面测试，设置同样大小的文件符软限制。
 
@@ -40,7 +42,6 @@ Benchmarking: GET http://172.18.82.9:9006/
 Speed=132492 pages/min, 247296 bytes/sec.
 Requests: 11041 susceed, 0 failed.
 ```
-
 
 * 16线程池大小压力测试：
 
@@ -123,6 +124,53 @@ sleep 1020241123 11:30:37.214869Z 414322 INFO  Test success! - redis_test.cc:43
 ==414322== For lists of detected and suppressed errors, rerun with: -s
 ==414322== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
 ```
+
+### ubuntu22.04 物理机环境
+
+```
+$ ./webbench -c 10500 -t 5 --get -1  http://127.0.0.1:8008/
+Webbench - Simple Web Benchmark 1.5
+Copyright (c) Radim Kolar 1997-2004, GPL Open Source Software.
+
+Benchmarking: GET http://127.0.0.1:8008/
+10500 clients, running 5 sec.
+
+Speed=4506936 pages/min, 48448356 bytes/sec.
+Requests: 375578 susceed, 0 failed.
+
+```
+
+* youshuang
+
+```
+$ ./webbench -c 10500 -t 5 --get -1  http://127.0.0.1:9006/
+Webbench - Simple Web Benchmark 1.5
+Copyright (c) Radim Kolar 1997-2004, GPL Open Source Software.
+
+Benchmarking: GET http://127.0.0.1:9006/
+10500 clients, running 5 sec.
+
+Speed=1241052 pages/min, 2316630 bytes/sec.
+Requests: 103421 susceed, 0 failed.
+```
+
+* 原版muduo粗略比较
+
+粗略比较，比较并不公平，因为muduo主页返回的是内存中写死的内容，不用进行文件读写。
+
+```
+$ ./webbench -c 10500 -t 5 --get -1  http://127.0.0.1:8000/
+Webbench - Simple Web Benchmark 1.5
+Copyright (c) Radim Kolar 1997-2004, GPL Open Source Software.
+
+Benchmarking: GET http://127.0.0.1:8000/
+10500 clients, running 5 sec.
+
+Speed=4451076 pages/min, 14094922 bytes/sec.
+Requests: 370923 susceed, 0 failed.
+```
+
+添加的功能并没有降低QPS，吞吐量更大。
 
 ## TODO:
 
