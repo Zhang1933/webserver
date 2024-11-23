@@ -86,6 +86,44 @@ Redis command 发送后，调用redisGetReply库函数返回的redisReply指针�
 1. get指令发送后, 尝试调用库函数redisGetReply获得执行结果，如果redisReply.type是REDIS_REPLY_ERROR，说明连接出问题，抛出异常,redisReply.str有错误的说明。
     * 如果得到的执行结果是OK，先判断redisReply.type是否为REDIS_REPLY_NIL,如果是,则说明键不存在.然后判断redisReply.type是否为REDIS_REPLY_STRING,如果是说明有返回值,根据redisReply中的str指针获取返回值。
 
+
+## Redis API内存泄漏检测：
+
+```bash
+$ valgrind --tool=memcheck --leak-check=full ./redis_test
+==414322== Memcheck, a memory error detector
+==414322== Copyright (C) 2002-2024, and GNU GPL'd, by Julian Seward et al.
+==414322== Using Valgrind-3.24.0 and LibVEX; rerun with -h for copyright info
+==414322== Command: ./redis_test
+==414322==
+20241123 11:30:32.063688Z 414331 TRACE updateChannel fd = 4 events = 3 index = -1 - EPollPoller.cc:111
+20241123 11:30:32.085902Z 414331 TRACE update epoll_ctl op = ADD fd = 4 event = { 4: IN PRI  } - EPollPoller.cc:179
+20241123 11:30:32.096996Z 414331 TRACE EventLoop EventLoop created 0x59E1930 in thread 414331 - EventLoop.cc:68
+20241123 11:30:32.101292Z 414331 TRACE updateChannel fd = 5 events = 3 index = -1 - EPollPoller.cc:111
+20241123 11:30:32.102819Z 414331 TRACE update epoll_ctl op = ADD fd = 5 event = { 5: IN PRI  } - EPollPoller.cc:179
+20241123 11:30:32.105740Z 414331 TRACE poll fd total count 2 - EPollPoller.cc:57
+try 0
+get reply:1234
+try 1
+get reply:1234
+try 2
+get reply:1234
+last try,sleep 5
+try 3
+get reply:1234
+sleep 1020241123 11:30:37.214869Z 414322 INFO  Test success! - redis_test.cc:43
+20241123 11:30:37.237136Z 414331 DEBUG ~EventLoop EventLoop 0x59E1930 of thread 414331 destructs in thread 414331 - EventLoop.cc:85
+==414322==
+==414322== HEAP SUMMARY:
+==414322==     in use at exit: 0 bytes in 0 blocks
+==414322==   total heap usage: 164 allocs, 164 frees, 82,361 bytes allocated
+==414322==
+==414322== All heap blocks were freed -- no leaks are possible
+==414322==
+==414322== For lists of detected and suppressed errors, rerun with: -s
+==414322== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+```
+
 ## TODO:
 
 * 性能调优
