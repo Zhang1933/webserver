@@ -18,6 +18,7 @@
 #include <cassert>
 #include <chrono>
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <thread>
 #include <utility>
@@ -39,6 +40,8 @@ ConnectionPool::ConnectionPool(const ConnectionPoolOptions &pool_opts,
     }
     _reconnection_thread.reset(new muduo::EventLoopThread);
     _recoonction_loop.reset(_reconnection_thread->startLoop());
+    _reconneciotn_list_Sptr=std::make_shared<std::list<Connection>>();
+    _recoonction_loop->setContext(_reconneciotn_list_Sptr);
     // Lazily create connections.
 }
 
@@ -99,8 +102,8 @@ void ConnectionPool::queueInLoop_try_reconnction(Connection conn){
     {
         std::unique_lock<std::mutex>unique_lock(_reconneciotn_list_mutex);
         
-        _reconneciotn_list.push_back(std::move(conn));
-        it=--_reconneciotn_list.end();
+        _reconneciotn_list_Sptr->push_back(std::move(conn));
+        it=--_reconneciotn_list_Sptr->end();
     }
     _recoonction_loop->queueInLoop(
         std::bind(
@@ -114,11 +117,10 @@ constexpr int MAXRECONNECTIONRETRYTIME=10;
 void ConnectionPool::try_reconnction(std::list<Connection>::iterator connection){
     try{
         connection->reconnect();
+        release(std::move(*connection));
         {
-            assert(!connection->broken());
             std::unique_lock<std::mutex>lock(_reconneciotn_list_mutex);
-            release(std::move(*connection));
-            connection=_reconneciotn_list.erase(connection);
+            _reconneciotn_list_Sptr->erase(connection);
         }
     }catch(const Error&){
         if(connection->reconnectFailedTimes<MAXRECONNECTIONRETRYTIME){

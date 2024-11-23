@@ -81,7 +81,7 @@ public:
     void queueInLoop_try_reconnction(Connection conn);
     size_t reconneciotn_list_size(){
         std::unique_lock<std::mutex>unique_lock(_reconneciotn_list_mutex);
-        return _reconneciotn_list.size();
+        return _reconneciotn_list_Sptr->size();
     }
 
 private:
@@ -99,9 +99,8 @@ private:
         }
     };
     std::unique_ptr<muduo::EventLoop,EventLoopDeleter>_recoonction_loop;
-
+    std::shared_ptr<std::list<Connection>>_reconneciotn_list_Sptr;
     std::mutex _reconneciotn_list_mutex;
-    std::list<Connection> _reconneciotn_list;
 
     Connection _fetch(std::unique_lock<std::mutex> &lock);
 

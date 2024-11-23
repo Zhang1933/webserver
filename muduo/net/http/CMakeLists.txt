@@ -19,3 +19,4 @@ install(FILES ${HEADERS} DESTINATION include/muduo/net/http)
 
 add_executable(httpserver_test test/HttpServer_test.cc)
 target_link_libraries(httpserver_test muduo_http)
+target_link_libraries(httpserver_test muduo_db)

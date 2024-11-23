@@ -3,10 +3,9 @@
 #include "muduo/net/http/HttpResponse.h"
 #include "muduo/net/EventLoop.h"
 #include "muduo/base/Logging.h"
-
+#include"muduo/net/db/redis.h"
 #include <iostream>
 #include <map>
-#include <filesystem>
 #include <string>
 #include <utility>
 #include <sys/resource.h>
@@ -20,6 +19,8 @@ bool benchmark = false;
 static std::string rootPath;
 
 typedef std::pair<std::string, std::string> userpasswdpii;
+
+auto redis = sw::redis::Redis("tcp://root@127.0.0.1:6379&pool_size=1");
 
 // 获得用户名与密码，失败返回fales
 bool getUserNameAndpsss(std::string content,userpasswdpii& userpass)
@@ -93,6 +94,7 @@ void onRequest(const HttpRequest& req, HttpResponse* resp)
     if(getUserNameAndpsss(content,usrpss))
     {
         std::cout << usrpss.first << ": " << usrpss.second<< std::endl;
+        redis.set(usrpss.first,usrpss.second);
         resp->setRetfilePath(rootPath+"/log.html");
     }
     else 

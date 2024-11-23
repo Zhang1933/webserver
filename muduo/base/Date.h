@@ -34,7 +34,8 @@ class Date : public muduo::copyable
   };
 
   static const int kDaysPerWeek = 7;
-  static const int kJulianDayOf1970_01_01;
+  static const int kJulianDayOf1970_01_01=2440588;//const int Date::kJulianDayOf1970_01_01 = detail::getJulianDayNumber(1970, 1, 1); 提前算好
+
 
   ///
   /// Constucts an invalid Date.
