@@ -1,7 +1,12 @@
 # webserver
 
+基于[chenshuo/muduo](https://github.com/chenshuo/muduo)
+
+与作者的webserver相比：
 * 支持踢掉空闲连接
 * 支持web视频播放、图片展示，使用内存与文件大小无关，只与连接数有关。
+* 支持用户登录、注册，提供 Redis API。Redis API 使用 Redis 连接池提供 session 功能，有延迟连接、
+后台自动重连功能。
 
 ## webserver测试：
 
@@ -108,9 +113,11 @@ Requests: 370923 susceed, 0 failed.
 
 # Redis API
 
+基于[sewenew/redis-plus-plus](https://github.com/sewenew/redis-plus-plus)
+
 Lazy conneciton：
 1. 线程向连接池申请连接时，加锁,如果发现已申请连接没达到设定的连接池大小，申请新的空连接，尝试用密码连接redis
-    如果在向连接池申请连接时，发现已申请连接达到设定的连接池大小，连接池中没有连接了，等待其他线程释放连接或坏连接变好。
+2. 如果在向连接池申请连接时，发现已申请连接达到设定的连接池大小，连接池中没有连接了，等待其他线程释放连接或坏连接变好。
 
 ## 后台自动重连逻辑
 
@@ -174,3 +181,4 @@ sleep 1020241123 11:30:37.214869Z 414322 INFO  Test success! - redis_test.cc:43
 ## TODO:
 
 * 性能调优
+
