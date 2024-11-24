@@ -165,7 +165,7 @@ void onRequest(const HttpRequest& req, HttpResponse* resp)
   }
   else if(req.path().find(".")!=string::npos)
   {
-    // 返回文件
+    // FIXME:判断有点粗暴， 返回文件
     resp->setRetfilePath(req.path());
   }
   else{

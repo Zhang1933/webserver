@@ -23,7 +23,7 @@ class TcpConnection:noncopyable,
 {
 public:
   typedef std::shared_ptr<FILE> FilePtr;
-  typedef std::pair<FilePtr, bool> filectxPii;
+  typedef std::pair<FilePtr, bool> filectxPii;//第二个参数为如果文件发送完毕，是否关闭连接。
 
   /// Constructs a TcpConnection with a connected sockfd
   ///
