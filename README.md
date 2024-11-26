@@ -182,3 +182,48 @@ sleep 1020241123 11:30:37.214869Z 414322 INFO  Test success! - redis_test.cc:43
 
 * 性能调优
 
+```bash
+Samples: 3K of event 'cycles:P', Event count (approx.): 104877547589
+  Children      Self  Command          Shared Object         Symbol
++   21.04%     0.00%  httpserver_test  [unknown]             [k] 0xffffffffffffffff
++   14.76%     0.76%  httpserver_test  [kernel.kallsyms]     [k] do_syscall_64
++   14.47%     0.09%  httpserver_test  [kernel.kallsyms]     [k] entry_SYSCALL_64_after_hwframe
++   14.04%     0.13%  httpserver_test  [kernel.kallsyms]     [k] x64_sys_call
++    7.57%     0.00%  httpserver_test  httpserver_test       [.] muduo::Acceptor::handleRead()
++    7.29%     0.04%  httpserver_test  httpserver_test       [.] muduo::TcpServer::newConnection(int, muduo::InetAddress const&)
++    5.95%     0.00%  httpserver_test  httpserver_test       [.] muduo::EventLoop::loop()
++    5.31%     0.06%  httpserver_test  libc.so.6             [.] accept4
++    5.30%     0.00%  httpserver_test  httpserver_test       [.] muduo::Socket::accept(muduo::InetAddress*)
++    5.26%     0.00%  httpserver_test  httpserver_test       [.] muduo::sockets::accept(int, sockaddr_in*)
++    5.24%     0.00%  Thread4          [unknown]             [k] 0xffffffffffffffff
++    5.23%     0.00%  Thread3          [unknown]             [k] 0xffffffffffffffff
++    5.16%     0.00%  Thread8          [unknown]             [k] 0xffffffffffffffff
++    5.16%     0.00%  Thread1          [unknown]             [k] 0xffffffffffffffff
++    5.09%     0.09%  httpserver_test  [kernel.kallsyms]     [k] __sys_accept4
++    5.05%     0.00%  httpserver_test  [kernel.kallsyms]     [k] __x64_sys_accept4
++    4.91%     0.04%  httpserver_test  [kernel.kallsyms]     [k] do_accept
++    4.88%     0.00%  Thread2          [unknown]             [k] 0xffffffffffffffff
++    4.63%     0.00%  Thread4          [kernel.kallsyms]     [k] entry_SYSCALL_64_after_hwframe
++    4.63%     0.00%  Thread4          [kernel.kallsyms]     [k] do_syscall_64
++    4.60%     0.00%  Thread3          [kernel.kallsyms]     [k] entry_SYSCALL_64_after_hwframe
++    4.60%     0.00%  Thread3          [kernel.kallsyms]     [k] do_syscall_64
++    4.57%     0.00%  Thread6          [unknown]             [k] 0xffffffffffffffff
++    4.46%     0.09%  httpserver_test  httpserver_test       [.] muduo::EventLoop::queueInLoop(std::function<void ()> const&)
++    4.41%     0.00%  Thread15         [unknown]             [k] 0xffffffffffffffff
++    4.36%     0.00%  Thread1          [kernel.kallsyms]     [k] entry_SYSCALL_64_after_hwframe
++    4.36%     0.00%  Thread1          [kernel.kallsyms]     [k] do_syscall_64
++    4.35%     0.00%  Thread2          [kernel.kallsyms]     [k] entry_SYSCALL_64_after_hwframe
++    4.35%     0.00%  Thread2          [kernel.kallsyms]     [k] do_syscall_64
++    4.33%     0.00%  Thread1          [kernel.kallsyms]     [k] x64_sys_call
++    4.32%     0.05%  Thread4          [kernel.kallsyms]     [k] x64_sys_call
++    4.28%     0.00%  Thread11         [unknown]             [k] 0xffffffffffffffff
++    4.23%     0.00%  Thread6          [kernel.kallsyms]     [k] entry_SYSCALL_64_after_hwframe
++    4.21%     0.09%  httpserver_test  httpserver_test       [.] muduo::EPollPoller::poll(int, std::vector<muduo::Channel*, std::allocator<muduo
++    4.16%     0.00%  Thread8          [kernel.kallsyms]     [k] entry_SYSCALL_64_after_hwframe
++    4.16%     0.19%  Thread8          [kernel.kallsyms]     [k] do_syscall_64
++    4.16%     0.00%  Thread8          [kernel.kallsyms]     [k] x64_sys_call
++    4.05%     0.00%  Thread6          [kernel.kallsyms]     [k] do_syscall_64
++    3.99%     0.00%  Thread3          [kernel.kallsyms]     [k] x64_sys_call
++    3.96%     0.00%  Thread11         [kernel.kallsyms]     [k] entry_SYSCALL_64_after_hwframe
++    3.96%     0.00%  Thread11         [kernel.kallsyms]     [k] do_syscall_64
+```
