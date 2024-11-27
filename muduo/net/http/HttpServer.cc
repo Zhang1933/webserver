@@ -171,12 +171,9 @@ void HttpServer::onWriteComplete(const TcpConnectionPtr& conn)
         LOG_INFO << "FileSend - done";
     }
   }
-  else
+  else if(fpii.second)
   {
-      if(fpii.second)
-      {
-        conn->shutdown();
-      }
+    conn->shutdown();
   }
 }
 

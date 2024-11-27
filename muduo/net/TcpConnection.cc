@@ -98,15 +98,15 @@ void TcpConnection::handleRead(Timestamp receiveTime)
     loop_->assertInLoopThread();
     int savedErrno=0;
     ssize_t n=inputBuffer_.readFd(channel_->fd(), &savedErrno);
-    if (n > 0) {
+    if (n ==-1) {
         messageCallback_(shared_from_this(), &inputBuffer_, receiveTime);
     } else if (n == 0) {
         handleClose();
-    } else {
+    } else if(n!=-1){
         errno = savedErrno;
         LOG_SYSERR << "TcpConnection::handleRead";
         handleError();
-  }
+    }
 }
 
 void TcpConnection::handleClose()
@@ -185,31 +185,48 @@ void TcpConnection::setTcpNoDelay(bool on)
 void TcpConnection::handleWrite()
 {
   loop_->assertInLoopThread();
-  if (channel_->isWriting()) {
-    ssize_t n = ::write(channel_->fd(),
-                        outputBuffer_.peek(),
-                        outputBuffer_.readableBytes());
-    if (n > 0) {
-      outputBuffer_.retrieve(static_cast<size_t>(n));
-      if (outputBuffer_.readableBytes() == 0) {
-        channel_->disableWriting();
-        if (writeCompleteCallback_) {
-          loop_->queueInLoop(
-              std::bind(writeCompleteCallback_, shared_from_this()));
-        }
-        if (state_ == kDisconnecting) {
-          LOG_INFO<<"write complete, state:"<<state_<<"shutdown con";
-          shutdownInLoop();
-        }
-      } else {
-        LOG_TRACE << "I am going to write more data";
-      }
-    } else {
-      LOG_SYSERR << "TcpConnection::handleWrite";
-    }
-  } else {
-    LOG_TRACE << "Connection is down, no more writing";
+  if (channel_->isWriting())
+  {
+		ssize_t n=0;
+		while(1)
+		{
+			n = sockets::write(channel_->fd(),
+								outputBuffer_.peek(),
+								outputBuffer_.readableBytes());
+			if (n > 0)
+			{
+				outputBuffer_.retrieve(n);
+				if (outputBuffer_.readableBytes() == 0)
+				{
+					channel_->disableWriting();
+					if (writeCompleteCallback_)
+					{
+						loop_->queueInLoop(std::bind(writeCompleteCallback_, shared_from_this()));
+					}
+					if (state_ == kDisconnecting)
+					{
+						shutdownInLoop();
+					}
+				}
+			}
+			else
+			{
+				if (errno != EAGAIN || errno != EWOULDBLOCK) {
+						LOG_SYSERR << "TcpConnection::handleWrite";
+				}
+				// if (state_ == kDisconnecting)
+				// {
+				//   shutdownInLoop();
+				// }
+				break;
+			}
+		}
   }
+	else
+	{
+		LOG_TRACE << "Connection fd = " << channel_->fd()
+				<< " is down, no more writing";
+	}
 }
 
 void TcpConnection::send(const void* data, size_t len)

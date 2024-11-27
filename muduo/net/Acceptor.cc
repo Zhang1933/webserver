@@ -31,9 +31,9 @@ void Acceptor::handleRead()
 {
     loop_->assertInLoopThread();
     InetAddress peerAddr(0);
-      //FIXME loop until no more
-    int connfd=acceptSocket_.accept(&peerAddr);
-    if(connfd>=0)
+    //TODO:错误处理
+    int connfd=0;
+    while((connfd=acceptSocket_.accept(&peerAddr))>0)
     {
         if(newConnectionCallback_){
             newConnectionCallback_(connfd,peerAddr);
@@ -43,7 +43,7 @@ void Acceptor::handleRead()
             sockets::close(connfd);
         }
     }
-    else {
-        LOG_WARN<<"Acceptor::handleRead connfd<0: "<<connfd;
-    }
+    // else {
+    //     LOG_WARN<<"Acceptor::handleRead connfd<0: "<<connfd;
+    // }
 }

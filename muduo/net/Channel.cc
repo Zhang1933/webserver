@@ -1,16 +1,15 @@
 #include "Channel.h"
 #include <cassert>
-#include <poll.h>
 #include "muduo/base/Logging.h"
 #include "muduo/base/Timestamp.h"
 #include <sstream>
-
-
+#include <poll.h>
+#include <sys/epoll.h>
 using namespace muduo;
 
-const int Channel::kReadEvent=POLLIN|POLLPRI;
-const int Channel::kWriteEvent=POLLOUT;
-const int Channel::kNoneEvent=0;
+const __uint32_t Channel::kReadEvent=EPOLLIN | EPOLLET|POLLPRI;
+const __uint32_t Channel:: kWriteEvent=EPOLLOUT | EPOLLET;
+const __uint32_t Channel::kNoneEvent=0;
 
 Channel::Channel(EventLoop *loop,int fdArg)
     :loop_(loop),
@@ -79,7 +78,7 @@ string Channel::eventsToString() const
   return eventsToString(fd_, events_);
 }
 
-string Channel::eventsToString(int fd, int ev)
+string Channel::eventsToString(int fd, __uint32_t ev)
 {
   std::ostringstream oss;
   oss << fd << ": ";

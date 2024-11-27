@@ -84,6 +84,7 @@ int sockets::accept(int sockfd, struct sockaddr_in* addr)
     if(connfd<0)
     {
     int savedErrno=errno;
+    if(savedErrno!=EAGAIN)
     LOG_SYSERR << "Socket::accept";
     switch (savedErrno)
     {
@@ -185,6 +186,11 @@ int sockets::getSocketError(int sockfd)
 ssize_t sockets::readv(int sockfd, const struct iovec *iov, int iovcnt)
 {
   return ::readv(sockfd, iov, iovcnt);
+}
+
+ssize_t sockets::write(int sockfd, const void *buf, size_t count)
+{
+  return ::write(sockfd, buf, count);
 }
 
 void sockets::shutdownWrite(int sockfd)
