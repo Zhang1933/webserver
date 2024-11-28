@@ -77,7 +77,7 @@ class HttpResponse : public muduo::copyable
   // append的时候判断有没有文件需要返回
   bool appendToBuffer(Buffer* output);
 
-  string GetretFilePath()const
+  string& GetFilePath()
   {return retFilePath_;}
 
  private:

@@ -13,6 +13,7 @@ set(HEADERS
   HttpRequest.h
   HttpResponse.h
   HttpServer.h
+  FileSingleton.h
   )
 install(FILES ${HEADERS} DESTINATION include/muduo/net/http)
 

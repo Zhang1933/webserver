@@ -4,6 +4,7 @@
 #include "muduo/base/Types.h"
 #include "muduo/net/Callback.h"
 #include "muduo/net/EventLoop.h"
+#include "muduo/net/http/FileSingleton.h"
 #include "muduo/net/http/HttpContext.h"
 #include "muduo/net/http/HttpRequest.h"
 #include "muduo/net/http/HttpResponse.h"
@@ -136,14 +137,14 @@ void HttpServer::onRequest(const TcpConnectionPtr& conn, HttpContext* context)
   Buffer buf;
   if(response.appendToBuffer(&buf))
   {
-    FILE* fp = ::fopen(response.GetretFilePath().data(), "rb");
-    assert(fp);
-    TcpConnection::FilePtr ctx(fp, ::fclose);
+    int fd=FileSingleton::get_instance().getFileDes(response.GetFilePath());
+    TcpConnection::fileDesoff ctx(fd,0);
     conn->setFileContext(TcpConnection::filectxPii(ctx,close));
   }
-  else 
+  else
   {
-    conn->setFileContext(TcpConnection::filectxPii(TcpConnection::FilePtr(),close));
+    // FIXME:表示不发送文件改为-1文件描述符
+    conn->setFileContext(TcpConnection::filectxPii());
   }
   conn->send(&buf);
 }
@@ -153,25 +154,24 @@ void HttpServer::onWriteComplete(const TcpConnectionPtr& conn)
   //NOTE: 文件发送，只取决于连接数，不取决于文件大小，drawback：不能支持pipeline。
   const int kBufSize = 64*1024;
   char buf[kBufSize];
-  TcpConnection::filectxPii fpii = conn->getFileContext();
-  if(fpii.first)
+  TcpConnection::filectxPii* fpii = conn->getFileContext();
+  if(fpii->first.first>0)
   {
-    size_t nread = ::fread(buf, 1, sizeof buf, fpii.first.get());
+    int fd=fpii->first.first;
+    ssize_t nread = ::pread(fd,buf, sizeof(buf),  fpii->first.second);
     if (nread > 0)
     {
-      conn->send(buf, nread);
+      fpii->first.second+=nread;
+      conn->send(buf, implicit_cast<size_t>(nread) );
     }
-    else 
+    else
     {
-        fpii.first.reset(); // FIXME:错误处理
-        if(fpii.second)
-        {
-          conn->shutdown();
-        }
+        // 等于0说明读完了
+        fpii->first.first=-1;
         LOG_INFO << "FileSend - done";
     }
   }
-  else if(fpii.second)
+  if(fpii->second)
   {
     conn->shutdown();
   }

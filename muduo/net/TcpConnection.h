@@ -5,9 +5,11 @@
 #include "muduo/net/Callback.h"
 #include "muduo/net/InetAddress.h"
 #include "muduo/net/Buffer.h"
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <boost/any.hpp>
+#include <utility>
 
 namespace muduo {
 
@@ -22,8 +24,8 @@ class TcpConnection:noncopyable,
     public std::enable_shared_from_this<TcpConnection>
 {
 public:
-  typedef std::shared_ptr<FILE> FilePtr;
-  typedef std::pair<FilePtr, bool> filectxPii;//第二个参数为如果文件发送完毕，是否关闭连接。
+  typedef std::pair<int, ssize_t> fileDesoff; // 文件名描述符与读的offset
+  typedef std::pair<fileDesoff, bool> filectxPii;//第一个参数为文件名与offset pair，第二个参数为如果文件发送完毕，是否关闭连接。
 
   /// Constructs a TcpConnection with a connected sockfd
   ///
@@ -78,8 +80,8 @@ public:
     // 文件相关的context
     void setFileContext(const filectxPii& fcontext)
     {fileContext_=fcontext;}
-    filectxPii& getFileContext()
-    { return fileContext_; }
+    filectxPii* getFileContext()
+    { return &fileContext_; }
 
     // 时间事件相关的context，TODO：几个context可以合成一个
     void setTimerContext(const boost::any& tcontext)
