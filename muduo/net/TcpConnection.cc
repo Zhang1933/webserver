@@ -99,13 +99,19 @@ void TcpConnection::handleRead(Timestamp receiveTime)
     int savedErrno=0;
     ssize_t n=inputBuffer_.readFd(channel_->fd(), &savedErrno);
     if (n ==-1) {
-        messageCallback_(shared_from_this(), &inputBuffer_, receiveTime);
+        if (savedErrno == EAGAIN || savedErrno == EWOULDBLOCK)
+        {
+          messageCallback_(shared_from_this(), &inputBuffer_, receiveTime);
+        }
+        else{
+          handleClose();
+        }
     } else if (n == 0) {
         handleClose();
     } else if(n!=-1){
         errno = savedErrno;
         LOG_SYSERR << "TcpConnection::handleRead";
-        handleError();
+        handleClose();
     }
 }
 
@@ -130,6 +136,7 @@ void TcpConnection::handleError()
   int err = sockets::getSocketError(channel_->fd());
   LOG_ERROR << "TcpConnection::handleError [" << name_
             << "] - SO_ERROR = " << err << " " << strerror_tl(err);
+  forceClose();
 }
 
 
@@ -213,6 +220,7 @@ void TcpConnection::handleWrite()
 			{
 				if (errno != EAGAIN || errno != EWOULDBLOCK) {
 						LOG_SYSERR << "TcpConnection::handleWrite";
+            forceClose();
 				}
 				// if (state_ == kDisconnecting)
 				// {
@@ -283,15 +291,14 @@ void TcpConnection::sendInLoop(const std::string& message)
             std::bind(writeCompleteCallback_, shared_from_this()));
       }
     } else {
-      nwrote = 0;
-      if (errno != EWOULDBLOCK) {
-        LOG_SYSERR << "TcpConnection::sendInLoop";
+      if (errno != EAGAIN) {
+        LOG_SYSERR << "TcpConnection::sendInLoop:"<<this->name();
+        forceClose();
       }
     }
   }
 
-  assert(nwrote >= 0);
-  if (implicit_cast<size_t>(nwrote) < message.size()) {
+  if (nwrote>=0&&implicit_cast<size_t>(nwrote) < message.size()) {
     outputBuffer_.append(message.data()+nwrote, message.size()-static_cast<size_t>(nwrote));
     if (!channel_->isWriting()) {
       channel_->enableWriting();

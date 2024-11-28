@@ -50,7 +50,7 @@ void Channel::handleEvent(Timestamp receiveTime)
   {
     if (errorCallback_) errorCallback_();
   }
-  if (revents_ & (POLLIN | POLLPRI | POLLRDHUP))
+  if (revents_ & (POLLIN | POLLPRI | EPOLLRDHUP))
   {
     if (readCallback_) readCallback_(receiveTime);
   }

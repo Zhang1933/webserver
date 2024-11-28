@@ -136,7 +136,7 @@ void HttpServer::onRequest(const TcpConnectionPtr& conn, HttpContext* context)
   Buffer buf;
   if(response.appendToBuffer(&buf))
   {
-    FILE* fp = ::fopen(response.GetretFilePath().c_str(), "rb");
+    FILE* fp = ::fopen(response.GetretFilePath().data(), "rb");
     assert(fp);
     TcpConnection::FilePtr ctx(fp, ::fclose);
     conn->setFileContext(TcpConnection::filectxPii(ctx,close));
