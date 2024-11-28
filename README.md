@@ -29,9 +29,8 @@ Copyright (c) Radim Kolar 1997-2004, GPL Open Source Software.
 Benchmarking: GET http://127.0.0.1:8008/
 10500 clients, running 5 sec.
 
-Speed=5693664 pages/min, 61206112 bytes/sec.
-Requests: 474472 susceed, 0 failed.
-
+Speed=5914440 pages/min, 63578552 bytes/sec.
+Requests: 492869 susceed, 1 failed.
 ```
 
 * youshuang
