@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <map>
 #include <mutex>
+#include <shared_mutex>
 #include <sys/types.h>
 #include <string>
 #include <unistd.h>
@@ -52,7 +53,7 @@ public:
 
     ssize_t getFileSize(const std::string& name)
     {
-        std::unique_lock<std::mutex> lock(mutex_);
+        std::shared_lock<std::shared_mutex> lock(mutex_);
         auto it=Filesmp_.find(name);
         if(it==Filesmp_.end())
         {
@@ -62,7 +63,7 @@ public:
     }
     int getFileDes(const std::string& name)
     {
-        std::unique_lock<std::mutex> lock(mutex_);
+        std::shared_lock<std::shared_mutex> lock(mutex_);
         auto it=Filesmp_.find(name);
         if(it==Filesmp_.end())
         {
@@ -72,7 +73,7 @@ public:
     }
     void insertFile(const std::string& name,const ssize_t& sz)
     {
-        std::unique_lock<std::mutex> lock(mutex_);
+        std::unique_lock<std::shared_mutex> lock(mutex_);
         auto it=Filesmp_.find(name);
         if(it!=Filesmp_.end())
         {
@@ -83,6 +84,6 @@ public:
 private:
     FileSingleton()=default;
     std::map<std::string,File> Filesmp_;
-    std::mutex mutex_;
+    std::shared_mutex mutex_;
 };
 

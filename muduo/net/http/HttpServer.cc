@@ -166,7 +166,7 @@ void HttpServer::onWriteComplete(const TcpConnectionPtr& conn)
     }
     else
     {
-        // 等于0说明读完了
+        // 等于0说明读完了。FIXME:错误处理
         fpii->first.first=-1;
         LOG_INFO << "FileSend - done";
     }

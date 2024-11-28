@@ -7,7 +7,7 @@
 #include <sys/epoll.h>
 using namespace muduo;
 
-const __uint32_t Channel::kReadEvent=EPOLLIN | EPOLLET|POLLPRI;
+const __uint32_t Channel::kReadEvent=EPOLLIN | EPOLLET|EPOLLPRI;
 const __uint32_t Channel:: kWriteEvent=EPOLLOUT | EPOLLET;
 const __uint32_t Channel::kNoneEvent=0;
 
