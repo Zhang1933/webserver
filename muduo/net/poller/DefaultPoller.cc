@@ -8,12 +8,13 @@ using namespace muduo;
 
 Poller* Poller::newDefaultPoller(EventLoop* loop)
 {
-  if (::getenv("MUDUO_USE_POLL"))
-  {
-    return new PollPoller(loop);
-  }
-  else
-  {
+  //FIXME:水平触发，边缘触发不兼容
+  // if (::getenv("MUDUO_USE_POLL"))
+  // {
+  //   return new PollPoller(loop);
+  // }
+  // else
+  // {
     return new EPollPoller(loop);
-  }
+  //}
 }

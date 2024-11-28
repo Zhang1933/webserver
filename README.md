@@ -7,6 +7,7 @@
 * 支持web视频播放、图片展示，使用内存与文件大小无关，只与连接数有关。
 * 支持用户登录、注册，提供 Redis API。Redis API 使用 Redis 连接池提供 session 功能，有延迟连接、
 后台自动重连功能。
+* epoll使用边缘触发。
 
 ## webserver测试：
 
@@ -21,31 +22,13 @@
 
 * 本webserver:
 
-```
-$ ./webbench -c 10500 -t 5 --get -1  http://127.0.0.1:8008/
-Webbench - Simple Web Benchmark 1.5
-Copyright (c) Radim Kolar 1997-2004, GPL Open Source Software.
+![alt text](images/thismuduo.png)
 
-Benchmarking: GET http://127.0.0.1:8008/
-10500 clients, running 5 sec.
-
-Speed=5914440 pages/min, 63578552 bytes/sec.
-Requests: 492869 susceed, 1 failed.
-```
+支持每秒9w的请求。
 
 * youshuang
 
-```
-$ ./webbench -c 10500 -t 5 --get -1  http://127.0.0.1:9006/
-Webbench - Simple Web Benchmark 1.5
-Copyright (c) Radim Kolar 1997-2004, GPL Open Source Software.
-
-Benchmarking: GET http://127.0.0.1:9006/
-10500 clients, running 5 sec.
-
-Speed=873804 pages/min, 1631100 bytes/sec.
-Requests: 72817 susceed, 0 failed.
-```
+![alt text](images/youshuang.png)
 
 * 原版muduo粗略比较
 
