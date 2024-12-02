@@ -9,6 +9,8 @@
 后台自动重连功能。
 * epoll使用边缘触发，压力测试下发现QPS比水平触发提升了约25%。
 
+代码的更改都在muduo/net目录下，muduo/base下的代码没有更改。
+
 ## webserver测试：
 
 使用[webbench-1.5](https://github.com/qinguoyi/TinyWebServer/tree/master/test_pressure/webbench-1.5)。
