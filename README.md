@@ -55,90 +55,42 @@ Requests: 370923 susceed, 0 failed.
 
 1. 讲一下accept连接的流程
 
+   listening socket 可读后，调用Accepter的handleRead,Accepter::handleRead会一直accept新连接，每accept到一个新连接，调用TcpServer的TcpServer::newConnection，TcpServer::newConnection获取线程池中的下一个subreactor，创建TcpConnection对象，设置HttpServer::onMessage的messageCallback，设置HttpServer::onConnection的connectionCallback_，设置HttpServer::onWriteComplete writeCompleteCallback，让subreactoer负责处理connection的消息。
+   创建connection对象的时候，构造函数传入获取的事件循环对象指针，在子事件循环中注册调用TcpConnection::connectEstablished函数，TcpConnection::connectEstablished会将套接字加入子事件循环的监听列表中，开始监听套接字上的消息。
+
+   * TcpServer对象维护一个shared_ptr，防止用的时候，connection对象被销毁了。
+
+2. 往一个远程断开连接的套接字写或者读会返回什么？
+   * 会触发一个SIGPIPE 信号，信号可以终止进程，需要设置把他忽略调。函数返回-1，并设置EPIPE错误。
+   * 如果远程主机正常关闭连接，读操作会返回 0，表示连接已关闭。
+3. 非阻塞模式下，读tcp套接字，没有消息返回什么?
+   如果没有数据可读，recv 或 read 会返回 -1。errno 会被设置为 EAGAIN 或 EWOULDBLOCK。
+4. 非阻塞模式下，写tcp套接字，buffer满了会返回什么？
+   会返回-1并设置,EAGAIN 或 EWOULDBLOCK。如果写buffer的中途满了，会返回实际写的数量。
+
+5. 文件传输使用内存与文件大小无关只与连接数有关是怎么做到的
+   * 在服务器返回消息时，先调用connection send函数向connection发送响应头中的消息，发送完后将HttpServer::onWriteComplete回调函数注册到事件循环的任务队列。HttpServer::onWriteComplete判断是否有文件要返回并且没发送完，如果有，读取64kB文件内容，调用connection send函数发送，这样一直循环直到文件读完。
+   * 会先写，写完如果满了，就监听可写事件写。
 
 
-2. close连接的流程
+7. 踢掉空闲连接是怎样做的？
+   这里用链表管理与维护的。连接建立与关闭都会调用 HttpServer::onConnection。
+   每个eventloop，也就是sub reactor中有一个链表。连接创建时，向链表尾添加连接指针，连接记录在链表中的位置。
 
-3. 文件传输使用内存与文件大小无关只与连接数有关是怎么做到的
- 会一直尝试发送，当
+   每个sub eventloop 每隔一秒检查链表中是否有超过一定时间的未活跃连接，如果有，会先关闭server的写端。然后放到subreactor事件循环中的任务队列中关闭连接，链表除以连接。
 
-
-4. 线程池的创建？
-
-5. 踢掉空闲连接是怎样做的？
+   连接不是超时关闭时，获取连接记录的链表位置，链表中移除连接。
 
 6. 用户登录是怎样做的？
+  数据库连接还没有实现。
+  从request对象中回去请求体内容，解析出用户名与密码，设置cookies字段返回给用户。
 
 7. http请求是怎么解析的？
+   connection中有消息来，会读入到buffer中去，回调函数调用HttpServer::onMessage，connection中会记录当前的http context，context开始读buffer内容，初始化为请求行状态，开始解析请求行，请求行解析完，进入期待请求头状态开始解析请求头，如果没有冒号只有回车换行符表明请求头解析完毕，请求头解析完毕后进入请求体解析状态，将结构放到context的request对象中里面。
 
-8. 
+8. 返回图片，视频，使用内存与文件无关是怎么做的？
+   * 每次从文件里面读64k到buffer，tcp连接会记录读的偏移，buffer往套接字里写，写完调用注册的回调函数，回调函数会接着读下一个64k，这么一直循环读文件，写套接字，回调，直到把文件读完。pread返回读的字节数，如果pread返回0，就表示读完了，可以不用发数据了。
 
-# Redis API
-
-基于[sewenew/redis-plus-plus](https://github.com/sewenew/redis-plus-plus)
-
-Lazy conneciton：
-1. 线程向连接池申请连接时，加锁,如果发现已申请连接没达到设定的连接池大小，申请新的空连接，尝试用密码连接redis
-2. 如果在向连接池申请连接时，发现已申请连接达到设定的连接池大小，连接池中没有连接了，等待其他线程释放连接或坏连接变好。
-
-## 后台自动重连逻辑
-
-
-1. 在连接池没满时，申请新连接的线程会尝试用密码连接redis，失败时，向重连接事件线程中注册重连接任务，向上抛出异常。
-2. 如果连接成功后，发送命令得到redis回复失败，连接可能坏掉了，向重连接事件线程中注册重连接任务，向上抛出异常，表示命令没有执行成功。
-
-* 后台重连接事件循环线程
-
-1. 运行重连接事件循环的线程负责重连，重连成功后，放回连接池。若任然失败，隔$2^1$,$2^2$,,,$2^{10}$秒后自动重试连接。
-2. 自动重连接的实现方式为向事件循环中反复注册定时重连接任务，根据失败次数改变定时时间。
-
-用户可用broken_connection_cnt与连接池大小判断可用连接数。
-
-## Redis API
-
-Redis command 发送后，调用redisGetReply库函数返回的redisReply指针（封装成unique_ptr），根据指针所指向的内容判断执行情况。
-
-1. set指令发送后，用redisReply判断返回是否为"OK"
-1. get指令发送后, 尝试调用库函数redisGetReply获得执行结果，如果redisReply.type是REDIS_REPLY_ERROR，说明连接出问题，抛出异常,redisReply.str有错误的说明。
-    * 如果得到的执行结果是OK，先判断redisReply.type是否为REDIS_REPLY_NIL,如果是,则说明键不存在.然后判断redisReply.type是否为REDIS_REPLY_STRING,如果是说明有返回值,根据redisReply中的str指针获取返回值。
-
-
-## Redis API内存泄漏检测：
-
-```bash
-$ valgrind --tool=memcheck --leak-check=full ./redis_test
-==414322== Memcheck, a memory error detector
-==414322== Copyright (C) 2002-2024, and GNU GPL'd, by Julian Seward et al.
-==414322== Using Valgrind-3.24.0 and LibVEX; rerun with -h for copyright info
-==414322== Command: ./redis_test
-==414322==
-20241123 11:30:32.063688Z 414331 TRACE updateChannel fd = 4 events = 3 index = -1 - EPollPoller.cc:111
-20241123 11:30:32.085902Z 414331 TRACE update epoll_ctl op = ADD fd = 4 event = { 4: IN PRI  } - EPollPoller.cc:179
-20241123 11:30:32.096996Z 414331 TRACE EventLoop EventLoop created 0x59E1930 in thread 414331 - EventLoop.cc:68
-20241123 11:30:32.101292Z 414331 TRACE updateChannel fd = 5 events = 3 index = -1 - EPollPoller.cc:111
-20241123 11:30:32.102819Z 414331 TRACE update epoll_ctl op = ADD fd = 5 event = { 5: IN PRI  } - EPollPoller.cc:179
-20241123 11:30:32.105740Z 414331 TRACE poll fd total count 2 - EPollPoller.cc:57
-try 0
-get reply:1234
-try 1
-get reply:1234
-try 2
-get reply:1234
-last try,sleep 5
-try 3
-get reply:1234
-sleep 1020241123 11:30:37.214869Z 414322 INFO  Test success! - redis_test.cc:43
-20241123 11:30:37.237136Z 414331 DEBUG ~EventLoop EventLoop 0x59E1930 of thread 414331 destructs in thread 414331 - EventLoop.cc:85
-==414322==
-==414322== HEAP SUMMARY:
-==414322==     in use at exit: 0 bytes in 0 blocks
-==414322==   total heap usage: 164 allocs, 164 frees, 82,361 bytes allocated
-==414322==
-==414322== All heap blocks were freed -- no leaks are possible
-==414322==
-==414322== For lists of detected and suppressed errors, rerun with: -s
-==414322== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
-```
 
 # TODO:
 
