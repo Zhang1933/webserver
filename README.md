@@ -5,7 +5,7 @@
 与作者的webserver相比，新添功能&特性：
 * 支持踢掉空闲连接
 * 支持web视频播放、图片展示，使用内存与文件大小无关，只与连接数有关。
-* 支持用户登录、注册，提供 Redis API。Redis API 使用 Redis 连接池提供 session 功能，有延迟连接。（调用了一个Redis API库）
+* 支持用户登录、注册，提供 Redis API。Redis API 使用 Redis 连接池提供 session 功能，有懒连接功能。（调用了一个Redis API库）
 * epoll使用边缘触发，压力测试下发现QPS比水平触发提升了约25%。
 
 代码的更改都在muduo/net目录下，muduo/base下的代码没有更改。
